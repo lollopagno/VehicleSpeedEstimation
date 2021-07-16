@@ -1,0 +1,9 @@
+
+# File
+*.xml
+*.iml
+*.pyc
+
+# Folder
+.idea
+/video
