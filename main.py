@@ -7,7 +7,7 @@ import common.url as Url
 import common.utility as Utility
 import tracking.motion as motion
 from Frame_rate import FrameRate
-from tracking.module_tracking import Tracking
+from tracking.module_tracking import TrackingModule
 
 # Params for Shi-Tomasi corner detection
 feature_params = dict(maxCorners=500,
@@ -68,7 +68,7 @@ class App:
         self.camera = get_cap(video_url["Url"], self.height, self.width)
 
         # Info tracking
-        self.info_tracking = Tracking(video_url)
+        self.tracking_module = TrackingModule(video_url)
 
         # Optical flow
         self.corners = []
@@ -78,13 +78,8 @@ class App:
         self.id_frame = 0
 
         self.lane_list = []
-        # Lane 1
-        self.v_1 = 0.0
-        self.corn_1 = 0
-
-        # Lane 2
-        self.v_2 = 0.0
-        self.corn_2 = 0
+        self.velocity_list = []
+        self.corner_list = []
 
         # Frame Rate
         self.frame_rate = FrameRate()
@@ -108,9 +103,9 @@ class App:
         parameters_mask = np.zeros((250, 600))
 
         # Polygons
-        view_polygon = self.info_tracking.get_view_polygon()
-        frame_rate_polygon = self.info_tracking.get_frame_rate_polygon()
-        rectangle_polygon = self.info_tracking.get_rectangle_polygon()
+        view_polygon = self.tracking_module.get_view_polygon()
+        frame_rate_polygon = self.tracking_module.get_frame_rate_polygon()
+        rectangle_polygon = self.tracking_module.get_rectangle_polygon()
 
         if len(view_polygon) > 0:
             cv.fillConvexPoly(view_mask, view_polygon, 1)
@@ -121,14 +116,12 @@ class App:
         if len(rectangle_polygon) > 0:
             cv.fillConvexPoly(view_mask, rectangle_polygon, 1)
 
-        lanes = self.info_tracking.get_number_lane()
+        lanes = self.tracking_module.get_number_lane()
 
         for index in range(0, lanes):
-            self.lane_list.append(self.info_tracking.get_lane(index))
-
-        # Global parameters
-        corn_1, corn_2 = 0, 0
-        v_1, v_2 = 0, 0
+            self.lane_list.append(self.tracking_module.get_polygon_lane(index))
+            self.velocity_list.append(0)
+            self.corner_list.append(0)
 
         while self.camera.isOpened():
             ret, frame = self.camera.read()
@@ -142,17 +135,18 @@ class App:
                 img = cv.bitwise_and(frame_copy, frame_copy, mask=view_mask)
 
                 # Draw text
-                self.draw_param_lane_1(parameters_mask)
-                self.draw_param_lane_2(parameters_mask)
+                for index in range(0, len(self.lane_list)):
+                    self.draw_param_lane(index, parameters_mask)
 
-                # Draw numbers
-                Utility.set_text(img, "1", (145, 257), color=Color.RED, dim=3, thickness=3)
-                Utility.set_text(img, "2", (100, 257), color=Color.CYAN, dim=3, thickness=3)
+                    # Draw numbers
+                    Utility.set_text(img, str(index + 1), self.tracking_module.draw_numbers(index),
+                                     color=self.tracking_module.get_color(index), dim=3, thickness=3)
 
                 # Draw lines
-                cv.line(img, (182, 274), (217, 508), Color.RED, 3)  # Lane 1
-                cv.line(img, (140, 271), (168, 510), Color.RED, 3)  # Lane 1/2
-                cv.line(img, (98, 279), (113, 510), Color.RED, 4)  # Lane 2
+                if len(self.lane_list) != 0:
+                    for index in range(0, len(self.lane_list) + 1):
+                        (x1, y1), (x2, y2) = self.tracking_module.draw_line_between_lane(index)
+                        cv.line(img, (x1, y1), (x2, y2), Color.RED, 3)
 
                 # Frame rate
                 self.frame_rate.run(img)
@@ -161,7 +155,7 @@ class App:
                 img_poly_lane = frame_copy.copy()
 
                 for index, lane in enumerate(self.lane_list):
-                    cv.fillPoly(img_poly_lane, [lane], self.info_tracking.get_color(index), cv.LINE_AA)
+                    cv.fillPoly(img_poly_lane, [lane], self.tracking_module.get_color(index), cv.LINE_AA)
 
                 img = cv.addWeighted(img_poly_lane, self.alpha, img, 1 - self.alpha, 0)
 
@@ -200,56 +194,45 @@ class App:
                     self.corners = new_corners
 
                     # Reset counter polygons
-                    corn_1, corn_2 = 0, 0
-                    v_1, v_2 = 0, 0
-                    distance_1, distance_2 = 0, 0
+                    corner_local_list = []
+                    distance_local_list = []
+
+                    for _ in range(0, len(self.lane_list)):
+                        corner_local_list.append(0)
+                        distance_local_list.append(0)
 
                     for corner in self.corners:
 
                         # Determine which polygon the corner belongs to
-                        is_inside = []
-                        for lane in self.lane_list:
-                            is_inside.append(cv.pointPolygonTest(lane, corner[0], True))
+                        for index, lane in enumerate(self.lane_list):
+                            is_inside = cv.pointPolygonTest(lane, corner[0], True)
 
-                        if len(is_inside) > 0:
-                            if is_inside[0] > 0:
-                                corn_1 += 1
-                                distance_1 += Utility.calc_distance(corner[0], corner[1])
-                                mmm_1 = distance_1 / corn_1
-                                v_1 = self.get_velocity(mmm_1)
+                            if is_inside > 0:
+                                current_corner = corner_local_list[index]
+                                current_distance = distance_local_list[index]
 
-                        if len(is_inside) > 1:
-                            if is_inside[1] > 0:
-                                corn_2 += 1
-                                distance_2 += Utility.calc_distance(corner[0], corner[1])
-                                mmm_2 = distance_2 / corn_2
-                                v_2 = self.get_velocity(mmm_2)
+                                current_corner += 1
+                                current_distance += Utility.calc_distance(corner[0], corner[1])
+                                mmm_1 = current_distance / current_corner
+                                current_velocity = self.get_velocity(mmm_1)
 
-                            # counter_2 += 1
-                            # dif2 = tuple(map(lambda i, j: i - j, corner[0], corner[1]))
-                            # mm2 += math.sqrt(dif2[0] * dif2[0] + dif2[1] * dif2[1])
-                            # mmm2 = mm2 / counter_2
-                            # velocity_2 = mmm2 * px2mm * self.frame_rate.fps * self.ms_2_kmh
+                                # Update values list
+                                corner_local_list[index] = current_corner
+                                self.velocity_list[index] = current_velocity
+                                distance_local_list[index] = current_distance
 
-                    self.corn_1, self.corn_2 = corn_1, corn_2
+                    self.corner_list = corner_local_list
 
                 if self.id_frame % self.detect_interval == 0:
                     f"""Update values each n-interval ({self.detect_interval}) frames"""
 
-                    # Update velocity, corners
-                    if corn_1 > self.minimum_corners:
-                        self.v_1 = round(v_1, 2)
-                        print(f"UPDATE VELOCITY\n1) V: {self.v_1}, C: {self.corn_1}", end="\n\n")
+                    for index, corners in enumerate(self.corner_list):
+                        if corners > self.minimum_corners:
+                            # Update velocity, corners
+                            print(f"UPDATE VELOCITY\n1) V: {self.velocity_list[index]}, C: {self.corner_list[index]}",
+                                  end="\n\n")
 
-                        # Lane 1
-                        self.draw_param_lane_1(parameters_mask)
-
-                    if corn_2 > self.minimum_corners:
-                        self.v_2 = round(v_2, 2)
-                        print(f"UPDATE VELOCITY\n2) V: {self.v_2}, C: {self.corn_2}", end="\n\n")
-
-                        # Lane 2
-                        self.draw_param_lane_2(parameters_mask)
+                            self.draw_param_lane(index, parameters_mask)
 
                     mask = np.zeros_like(frame_gray)
                     mask[:] = 255
@@ -280,35 +263,21 @@ class App:
         Calculate velocity.
         :param distance: distance between two points.
         """
-        return distance * px2mm * self.frame_rate.fps * self.ms_2_kmh
+        return round(distance * px2mm * self.frame_rate.fps * self.ms_2_kmh, 2)
 
-    def draw_param_lane_1(self, mask):
+    def draw_param_lane(self, index, mask):
         r"""
-        Update the parameters for lane 1.
+        Update the parameters for specific lane.
+        :param index: current index of lane.
         :param mask: mask to update the parameters.
         """
         # Portion image: (y1,y2), (x1,x2)
-        mask[13:46, 170:368] = 0
-        mask[44:73, 140:192] = 0
+        mask = self.tracking_module.refresh_mask(index, mask)
 
-        Utility.set_text(mask, f"1-Lane speed: {self.v_1} km/h,  ", (20, 30),
-                         color=Color.WHITE, dim=1.2, thickness=1)
-        Utility.set_text(mask, f"1-Corners : {self.corn_1}", (20, 60), color=Color.WHITE,
-                         dim=1.2, thickness=1)
-
-    def draw_param_lane_2(self, mask):
-        r"""
-        Update the parameters for lane 2.
-        :param mask: mask to update the parameters.
-        """
-
-        mask[84:113, 170:353] = 0
-        mask[113:143, 146:210] = 0
-
-        Utility.set_text(mask, f"2-Lane speed: {self.v_2} km/h,  ", (20, 100),
-                         color=Color.WHITE, dim=1.2, thickness=1)
-        Utility.set_text(mask, f"2-Corners : {self.corn_2}", (20, 130), color=Color.WHITE,
-                         dim=1.2, thickness=1)
+        Utility.set_text(mask, f"{index + 1}-Lane speed: {self.velocity_list[index]} km/h,  ",
+                         self.tracking_module.get_velocity(index), color=Color.WHITE, dim=1.2, thickness=1)
+        Utility.set_text(mask, f" {index + 1}-Corners : {self.corner_list[index]}",
+                         self.tracking_module.get_corner(index), color=Color.WHITE, dim=1.2, thickness=1)
 
 
 if __name__ == "__main__":
@@ -316,5 +285,5 @@ if __name__ == "__main__":
     Main
     """
 
-    app = App(video_url=Url.TAIPEI)
+    app = App(video_url=Url.CAMBRIDGE)
     app.run()
