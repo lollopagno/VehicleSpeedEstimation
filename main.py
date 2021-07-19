@@ -5,9 +5,9 @@ import pafy
 import common.color as Color
 import common.url as Url
 import common.utility as Utility
-import motion as Motion
+import tracking.motion as motion
 from Frame_rate import FrameRate
-from module_tracking import Tracking
+from tracking.module_tracking import Tracking
 
 # Params for Shi-Tomasi corner detection
 feature_params = dict(maxCorners=500,
@@ -169,7 +169,7 @@ class App:
                     prev_img, current_img = self.previous_frame, frame_gray
 
                     # Detect motion
-                    Motion.detect(img=frame, frame_1=prev_img, frame_2=current_img, VALUE_AREA=600)
+                    motion.detect(img=frame, frame_1=prev_img, frame_2=current_img, VALUE_AREA=600)
 
                     prev_corners = np.float32([corner[-1] for corner in self.corners]).reshape(-1, 1, 2)
 
