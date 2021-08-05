@@ -2,8 +2,8 @@ import numpy as np
 import cv2 as cv
 import Common.color as Color
 import Common.utility as Utility
-import MotionTracking.motion as motion
-from MotionTracking.module_tracking import TrackingModule
+import MotionTracking.Motion as motion
+from MotionTracking.ModuleTracking import TrackingModule
 from Frame_rate import FrameRate
 from Common.load_video import get_video
 
