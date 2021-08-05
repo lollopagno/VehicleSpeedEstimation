@@ -2,8 +2,8 @@ import time
 
 import numpy as np
 
-import common.color as Colors
-import common.utility as Utility
+import Common.color as Colors
+import Common.utility as Utility
 
 
 class FrameRate:

@@ -1,6 +1,6 @@
 import numpy as np
 
-import common.color as Color
+import Common.color as Color
 
 
 #####

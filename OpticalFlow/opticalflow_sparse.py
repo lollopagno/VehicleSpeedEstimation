@@ -1,11 +1,11 @@
 import numpy as np
 import cv2 as cv
-import common.color as Color
-import common.utility as Utility
-import tracking.motion as motion
-from tracking.module_tracking import TrackingModule
+import Common.color as Color
+import Common.utility as Utility
+import MotionTracking.motion as motion
+from MotionTracking.module_tracking import TrackingModule
 from Frame_rate import FrameRate
-from common.load_video import get_video
+from Common.load_video import get_video
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Sparse"
 WINDOW_PARAMETERS = "Parameters"
@@ -40,7 +40,7 @@ class OpticalFlowSparse:
         self.width = width_cam
         self.camera = get_video(video_url["Url"], self.height, self.width)
 
-        # Info tracking
+        # Info MotionTracking
         self.tracking_module = TrackingModule(video_url)
 
         # Optical flow

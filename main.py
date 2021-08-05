@@ -1,5 +1,5 @@
-import common.url as Url
-from opticalflow_sparse import OpticalFlowSparse
+import Common.url as Url
+from OpticalFlow.opticalflow_sparse import OpticalFlowSparse
 
 DENSE = "Dense"
 SPARSE = "Sparse"

@@ -1,7 +1,7 @@
 import cv2 as cv
 import pafy
 
-from common import url as Url
+from Common import url as Url
 
 PATH = "video/jackson_hole.avi"
 

@@ -2,7 +2,7 @@ import math
 
 import cv2 as cv
 
-import common.color as Color
+import Common.color as Color
 
 
 def set_text(img, text, pos, font=cv.FONT_HERSHEY_PLAIN, dim=2, color=Color.MAGENTA, thickness=2):
