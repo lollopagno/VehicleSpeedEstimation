@@ -1,9 +1,11 @@
-from PyQt5.QtWidgets import QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout
-from PyQt5.QtGui import QColor
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout
+
+from Common.utility import log
 
 COLUMN_VEHICLE = "Vehicle"
-COLUMN_VELOCITY = "Velocty"
+COLUMN_VELOCITY = "Velocity"
 COLUMN_COLOR = "Color"
 
 
@@ -36,7 +38,7 @@ class Table(QWidget):
         self.show()
 
     def update_table(self, name_vehicle, velocity):
-        print("Update row")
+        log(2, "Update row")
 
         columns = self.table.columnCount()
         rows = self.table.rowCount()
@@ -55,7 +57,7 @@ class Table(QWidget):
                         pass
 
     def delete_row(self, name_vehicle):
-        print("Delete row")
+        log(2, "Delete row")
 
         columns = self.table.columnCount()
         rows = self.table.rowCount()
@@ -66,15 +68,18 @@ class Table(QWidget):
             if column_text == COLUMN_VEHICLE:
 
                 for row in range(rows):
-                    cell = self.table.item(row, column).text()
+                    try:
+                        cell = self.table.item(row, column).text()
 
-                    if cell == name_vehicle:
-                        self.table.removeRow(row)
+                        if cell == name_vehicle:
+                            self.table.removeRow(row)
+                    except Exception as e:
+                        log(1, f"Error in DELETE ROW TABLE: {e}")
 
     def add_row(self, item):
         name, _, color, velocity = item
         color_qt = QColor.fromRgb(color[0], color[1], color[2])
-        print(f"Add row {name}, {velocity}, {color}")
+        log(2, f"Add row: {name}, {velocity}, {color}")
 
         current_row = self.table.rowCount()
         item_color = QTableWidgetItem()

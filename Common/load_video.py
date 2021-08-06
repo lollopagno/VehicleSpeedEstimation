@@ -1,5 +1,7 @@
-import pafy
 import cv2 as cv
+import pafy
+
+from Common.utility import log
 
 
 def get_video(url, height, width):
@@ -18,11 +20,11 @@ def get_video(url, height, width):
             #play = video_pafy.getbest()
             #cap = cv.VideoCapture(play.url)
 
-            cap = cv.VideoCapture("video/cambridge2.avi")
+            cap = cv.VideoCapture("video/cambridge.avi")
             cap.set(cv.CAP_PROP_FRAME_WIDTH, width)
             cap.set(cv.CAP_PROP_FRAME_HEIGHT, height)
             flag = True
         except Exception as e:
-            print(f"Error load video: {e}")
+            log(1, f"Error load video: {e}")
 
     return cap

@@ -1,11 +1,12 @@
-import numpy as np
 import cv2 as cv
+import numpy as np
+
 import Common.color as Color
 import Common.utility as Utility
 import MotionTracking.Motion as motion
-from MotionTracking.ModuleTracking import TrackingModule
-from Frame_rate import FrameRate
 from Common.load_video import get_video
+from Frame_rate import FrameRate
+from MotionTracking.ModuleTracking import TrackingModule
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Sparse"
 WINDOW_PARAMETERS = "Parameters"
@@ -29,7 +30,7 @@ def callback_mouse(event, x, y, flag, param):
     Image callback after mouse click.
     """
     if event == cv.EVENT_LBUTTONDOWN:
-        print(f"Click image in position ({x},{y})")
+        Utility.log(0, f"Click image in position ({x},{y})")
 
 
 class OpticalFlowSparse:
@@ -68,8 +69,8 @@ class OpticalFlowSparse:
     def run(self):
 
         if self.show_log:
-            print("Optical Flow Sparse start!")
-            print(f"City: {self.tracking_module.name_city}")
+            Utility.log(0, "Optical Flow Sparse start!")
+            Utility.log(0, f"City: {self.tracking_module.name_city}")
 
         _, first_frame = self.camera.read()
         first_frame = cv.resize(first_frame, (self.width, self.height))
@@ -210,8 +211,8 @@ class OpticalFlowSparse:
                     for index, corners in enumerate(self.corner_list):
                         if corners > self.minimum_corners:
                             # Update velocity, corners
-                            print(f"UPDATE VELOCITY\n1) V: {self.velocity_list[index]}, C: {self.corner_list[index]}",
-                                  end="\n\n")
+                            Utility.log(0,
+                                        f"UPDATE VELOCITY\n1) V: {self.velocity_list[index]}, C: {self.corner_list[index]}")
 
                             self.draw_param_lane(index, parameters_mask)
 

@@ -1,11 +1,14 @@
+import sys
+
 import cv2 as cv
 import numpy as np
-from Common.load_video import get_video
-from Frame_rate import FrameRate
-from MotionTracking.Motion import detect_car
-from Common.table import Table
-import sys
 from PyQt5.QtWidgets import QApplication
+
+from Common.load_video import get_video
+from Common.table import Table
+from Common.utility import log
+from Frame_rate import FrameRate
+from MotionTracking.Motion import detect_vehicle
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Dense"
 
@@ -48,8 +51,8 @@ class OpticalFlowDense:
         cv.setMouseCallback(WINDOW_OPTICAL_FLOW, callback_mouse)
 
         if self.show_log:
-            print("Optical Flow Dense start!")
-            print(f"City: {self.city}")
+            log(0, "Optical Flow Dense start!")
+            log(0, f"City: {self.city}")
 
         self.table.show()
 
@@ -91,11 +94,12 @@ class OpticalFlowDense:
                 mask = np.zeros_like(frame)
                 mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
-                self.vehicle_list, self.counter_vehicle = detect_car(img=frame, mask=mask, vehicles=self.vehicle_list,
-                                                                     counter_vehicle=self.counter_vehicle,
-                                                                     table=self.table)
+                self.vehicle_list, self.counter_vehicle = detect_vehicle(img=frame, mask=mask,
+                                                                         vehicles=self.vehicle_list,
+                                                                         counter_vehicle=self.counter_vehicle,
+                                                                         table=self.table)
 
-                print(f"Iteration: {self.iterations}")
+                log(0, f"Iteration: {self.iterations}")
                 self.iterations += 1
                 dense_flow = cv.addWeighted(frame, 1, mask_rgb, 2, 0)
 
