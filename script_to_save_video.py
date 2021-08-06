@@ -3,9 +3,9 @@ import pafy
 
 from Common import url as Url
 
-PATH = "video/jackson_hole.avi"
+PATH = "video/cambridge2.avi"
 
-video_pafy = pafy.new(Url.CAMBRIDGE)
+video_pafy = pafy.new(Url.CAMBRIDGE['Url'])
 play = video_pafy.getbest()
 cap = cv.VideoCapture(play.url)
 

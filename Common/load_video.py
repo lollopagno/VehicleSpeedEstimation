@@ -14,14 +14,15 @@ def get_video(url, height, width):
 
     while not flag:
         try:
-            video_pafy = pafy.new(url)
-            play = video_pafy.getbest()
+            #video_pafy = pafy.new(url)
+            #play = video_pafy.getbest()
+            #cap = cv.VideoCapture(play.url)
 
-            cap = cv.VideoCapture(play.url)
+            cap = cv.VideoCapture("video/cambridge2.avi")
             cap.set(cv.CAP_PROP_FRAME_WIDTH, width)
             cap.set(cv.CAP_PROP_FRAME_HEIGHT, height)
             flag = True
-        except:
-            pass
+        except Exception as e:
+            print(f"Error load video: {e}")
 
     return cap

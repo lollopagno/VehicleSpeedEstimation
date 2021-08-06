@@ -34,7 +34,7 @@ def callback_mouse(event, x, y, flag, param):
 
 class OpticalFlowSparse:
 
-    def __init__(self, video_url, height_cam=512, width_cam=750):
+    def __init__(self, video_url, height_cam=512, width_cam=750, show_log=True):
         # Camera
         self.height = height_cam
         self.width = width_cam
@@ -55,7 +55,10 @@ class OpticalFlowSparse:
         self.corner_list = []
 
         # Frame Rate
-        self.frame_rate = FrameRate()
+        x, y = video_url["Frame rate"]
+        self.frame_rate = FrameRate(x=x, y=y)
+
+        self.show_log = show_log
 
         # Constants
         self.alpha = 0.5  # Used for addWeighted
@@ -63,6 +66,11 @@ class OpticalFlowSparse:
         self.minimum_corners = 5  # Minimum corners to update velocity
 
     def run(self):
+
+        if self.show_log:
+            print("Optical Flow Sparse start!")
+            print(f"City: {self.tracking_module.name_city}")
+
         _, first_frame = self.camera.read()
         first_frame = cv.resize(first_frame, (self.width, self.height))
 

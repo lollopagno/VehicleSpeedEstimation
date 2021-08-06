@@ -30,7 +30,6 @@ if __name__ == "__main__":
     r"""
     Main
     """
-
     app = App(video_url=Url.TAIPEI,
-              type_op=SPARSE)
+              type_op=DENSE)
     app.run()
