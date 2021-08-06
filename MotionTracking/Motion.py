@@ -1,8 +1,10 @@
 import cv2 as cv
+
 import Common.color as Color
 import Common.utility as Utility
 
-VALUE_AREA = 20
+VALUE_AREA = 100
+
 
 def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5), iter_dilate=4, VALUE_AREA=150):
     r"""
@@ -33,18 +35,29 @@ def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5),
         cv.rectangle(img, (x, y), (x + w, y + h), Color.RED, 2)
 
 
-def detect_car(img, mask, vehicles, counter_vehicle, table):
+def detect_vehicle(img, mask, vehicles, counter_vehicle, table):
     r"""
-
+    Detect vehicle into img.
+    :param img: img .
+    :param mask: mask.
+    :param vehicles: list of vehicles.
+    :param counter_vehicle: number of vehicles.
+    :param table object table.
     """
     img_gray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
-    _, thresh = cv.threshold(img_gray, 20, 255, cv.THRESH_BINARY)
+    _, img_bin = cv.threshold(img_gray, 20, 255, cv.THRESH_BINARY)
 
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, (5, 5))
-    opening = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel, iterations=4)
-    erode = cv.erode(opening, kernel, iterations=4)
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
+    img_erode = cv.erode(img_bin, kernel, iterations=8)
+    img_dilate = cv.dilate(img_erode, kernel, iterations=12)
 
-    contours, _ = cv.findContours(erode, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+    contours, _ = cv.findContours(img_dilate, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+
+    mask_binary = cv.resize(img_dilate, (400, 400))
+    mask_binary = cv.cvtColor(mask_binary, cv.COLOR_GRAY2RGB)
+    Utility.set_text(mask_binary, str(len(contours)), (320, 380), color=Color.RED, thickness=3)
+    cv.imshow("Binary mask", mask_binary)
+    cv.waitKey(1)
 
     new_list_vehicles = []
 
@@ -54,7 +67,7 @@ def detect_car(img, mask, vehicles, counter_vehicle, table):
             area = cv.contourArea(cnt)
 
             if area <= VALUE_AREA:
-                print(f"Counter deleted [{area}]! (if motion)")
+                Utility.log(0, f"Counter deleted [{area}]! (if motion)")
                 continue
 
             color = Utility.get_random_color()
@@ -75,25 +88,23 @@ def detect_car(img, mask, vehicles, counter_vehicle, table):
             area = cv.contourArea(cnt)
 
             if area <= VALUE_AREA:
-                print(f"Counter deleted! [{area}] (else motion)")
+                Utility.log(0, f"Counter deleted! [{area}] (else motion)")
                 continue
 
             new_coordinates = ((x, y), (x + w, y + h))
-            vehicles, new_list_vehicles, counter_vehicle = Utility.get_distance_bouding_box(
+            vehicles, new_list_vehicles, counter_vehicle = Utility.get_distance_bounding_box(
                 new_coordinates=new_coordinates,
                 boxes=vehicles,
                 new_list=new_list_vehicles,
                 counter=counter_vehicle,
                 table=table,
-                img = img)
+                img=img)
 
         if len(vehicles) > 0:
             # Remove vehicles no longer present
             for vehicle in vehicles:
                 name, _, _, _ = vehicle
+                Utility.log(0, f"Remove vehicle: {name} (not displayed)")
                 table.delete_row(name)
-
-    cv.imshow("Binary mask", cv.resize(opening, (400, 400)))
-    cv.waitKey(1)
 
     return new_list_vehicles, counter_vehicle
