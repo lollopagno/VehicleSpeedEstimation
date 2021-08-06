@@ -2,6 +2,7 @@ import cv2 as cv
 import Common.color as Color
 import Common.utility as Utility
 
+VALUE_AREA = 20
 
 def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5), iter_dilate=4, VALUE_AREA=150):
     r"""
@@ -52,8 +53,8 @@ def detect_car(img, mask, vehicles, counter_vehicle, table):
             (x, y, w, h) = cv.boundingRect(cnt)
             area = cv.contourArea(cnt)
 
-            if area <= 500:
-                print("Counter deleted! (if motion)")
+            if area <= VALUE_AREA:
+                print(f"Counter deleted [{area}]! (if motion)")
                 continue
 
             color = Utility.get_random_color()
@@ -73,8 +74,8 @@ def detect_car(img, mask, vehicles, counter_vehicle, table):
             (x, y, w, h) = cv.boundingRect(cnt)
             area = cv.contourArea(cnt)
 
-            if area <= 500:
-                print("Counter deleted! (else motion)")
+            if area <= VALUE_AREA:
+                print(f"Counter deleted! [{area}] (else motion)")
                 continue
 
             new_coordinates = ((x, y), (x + w, y + h))
