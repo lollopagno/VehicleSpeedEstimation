@@ -3,7 +3,7 @@ import cv2 as cv
 import Common.color as Color
 import Common.utility as Utility
 
-VALUE_AREA = 100
+VALUE_AREA = 400
 
 
 def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5), iter_dilate=4, VALUE_AREA=150):
@@ -101,10 +101,16 @@ def detect_vehicle(img, mask, vehicles, counter_vehicle, table):
                 img=img)
 
         if len(vehicles) > 0:
-            # Remove vehicles no longer present
+
             for vehicle in vehicles:
-                name, _, _, _ = vehicle
-                Utility.log(0, f"Remove vehicle: {name} (not displayed)")
-                table.delete_row(name)
+                name, coordinates, color, _ = vehicle
+
+                if Utility.check_exit_to_the_scene(img_gray, coordinates):
+                    # Remove vehicles no longer present if they leave the scene
+                    Utility.log(0, f"Remove vehicle: {name} (not displayed)")
+                    table.delete_row(name)
+                else:
+                    # Stationary vehicle
+                    Utility.draw_vehicle(img, coordinates, name, color)
 
     return new_list_vehicles, counter_vehicle

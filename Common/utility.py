@@ -10,6 +10,7 @@ import Common.color as Color
 def log(info, msg):
     r"""
     Print message based on info.
+
     :param info: type of message.
     :param msg: msg to show.
 
@@ -64,6 +65,7 @@ def get_random_color():
 def draw_vehicle(img, coordinates, name, color):
     r"""
     Draw the bounding box of a vehicle.
+
     :param img: img to draw in
     :param coordinates: of the bounding box.
     :param name: name vehicle.
@@ -76,21 +78,40 @@ def draw_vehicle(img, coordinates, name, color):
     cv.rectangle(img, start, end, color, thick + 3)
 
     x, y = start
+
+    # Split text and number
+    num = [str(i) for i in name.split() if i.isdigit()]
+    name = name.replace(num[0], "")
     set_text(img, name, (x, y - 12), color=color, thickness=thick, dim=1.5)
+    set_text(img, num[0], (x + 90, y - 12), color=color, thickness=thick + 1, dim=1.5)
 
 
 def get_barycenter(point):
     r"""
     Get barycenter of the bounding box.
+
     :param point: end point (x_max, y_max) of the bounding box.
     :return: coordinates of the barycenter.
     """
     return tuple(map(lambda point: round(point / 2), point))
 
+def check_exit_to_the_scene(img, coordinates):
+    r"""
+    The functions checks if the vehicle leave to the scene.
+
+    :param img: shape of image.
+    :param coordinates: coordinates of the vehicle.
+    """
+    (x_start, y_start), (x_end, y_end) = coordinates
+    height, width = img.shape
+
+
+    raise NotImplementedError
 
 def get_distance_bounding_box(boxes, new_coordinates, new_list, counter, table, img):
     r"""
-    Get the minimum distance between all bounding boxes
+    Get the minimum distance between all bounding boxes.
+
     :param boxes: list of the bounding boxes.
     :param new_coordinates: coordinates of the next bounding box.
     :param new_list: list that contains the vehicles to the next frame.
