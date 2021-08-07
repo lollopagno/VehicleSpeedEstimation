@@ -69,7 +69,10 @@ class Table(QWidget):
 
                 for row in range(rows):
                     try:
-                        cell = self.table.item(row, column).text()
+                        try:
+                            cell = self.table.item(row, column).text()
+                        except:
+                            continue
 
                         if cell == name_vehicle:
                             self.table.removeRow(row)
