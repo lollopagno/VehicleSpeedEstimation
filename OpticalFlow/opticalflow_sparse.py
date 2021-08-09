@@ -194,7 +194,7 @@ class OpticalFlowSparse:
                                 current_distance = distance_local_list[index]
 
                                 current_corner += 1
-                                current_distance += Utility.calc_distance(corner[0], corner[1])
+                                current_distance += Utility.get_length(corner[0], corner[1])
                                 mmm_1 = current_distance / current_corner
                                 current_velocity = self.get_velocity(mmm_1)
 

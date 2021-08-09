@@ -44,9 +44,9 @@ def set_text(img, text, pos, font=cv.FONT_HERSHEY_PLAIN, dim: float = 2, color=C
     cv.putText(img, text, pos, font, dim, color, thickness)
 
 
-def calc_distance(point_1, point_2):
+def get_length(point_1, point_2):
     r"""
-    Calculate the distance between two points.
+    Calculate the length between two points.
 
     :param point_1: point 1.
     :param point_2: point 2.
@@ -62,28 +62,32 @@ def get_random_color():
     return tuple((int(color[0]), int(color[1]), int(color[2])))
 
 
-def draw_vehicle(img, coordinates, name, color):
+def draw_vehicle(vehicles, img):
     r"""
     Draw the bounding box of a vehicle.
 
-    :param img: img to draw in
-    :param coordinates: of the bounding box.
-    :param name: name vehicle.
-    :param color: color bounding box.
+    :param img: img to draw in.
+    :param vehicles: vehicles to draw.
     """
+
     height, width, _ = img.shape
-    thick = int((height + width) // 900)
 
-    start, end = coordinates
-    cv.rectangle(img, start, end, color, thick + 3)
+    for vehicle in vehicles:
+        print(vehicle)
+        name, coordinates, color, _ = vehicle
 
-    x, y = start
+        thick = int((height + width) // 900)
 
-    # Split text and number
-    num = [str(i) for i in name.split() if i.isdigit()]
-    name = name.replace(num[0], "")
-    set_text(img, name, (x, y - 12), color=color, thickness=thick, dim=1.5)
-    set_text(img, num[0], (x + 90, y - 12), color=color, thickness=thick + 1, dim=1.5)
+        start, end = coordinates
+        cv.rectangle(img, start, end, color, thick + 3)
+
+        x, y = start
+
+        # Split text and number
+        num = [str(i) for i in name.split() if i.isdigit()]
+        name = name.replace(num[0], "")
+        set_text(img, name, (x, y - 12), color=color, thickness=thick, dim=1.5)
+        set_text(img, num[0], (x + 90, y - 12), color=color, thickness=thick + 1, dim=1.5)
 
 
 def get_barycenter(point):
@@ -108,7 +112,7 @@ def check_exit_to_the_scene(img, coordinates, max_value=35):
     """
 
     (x_start, y_start), (x_end, y_end) = coordinates
-    height, width = img.shape
+    height, width, _ = img.shape
 
     if (x_start <= max_value and x_end <= max_value) or (x_start >= width - max_value and x_end >= width - max_value):
         # Check x-coordinate
