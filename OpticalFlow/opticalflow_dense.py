@@ -8,7 +8,7 @@ from Common.load_video import get_video
 from Common.table import Table
 from Common.utility import log
 from Frame_rate import FrameRate
-from MotionTracking.Motion import detect_vehicle
+from MotionTracking.Motion import Motion
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Dense"
 
@@ -23,6 +23,9 @@ def callback_mouse(event, x, y, flag, param):
 
 
 class OpticalFlowDense:
+    r"""
+    Class to detect moving vehicles by implementation of optical flow dense.
+    """
 
     def __init__(self, video_url, height_cam=512, width_cam=750, show_log=True):
         # Camera
@@ -34,8 +37,8 @@ class OpticalFlowDense:
         self.app_qt = QApplication(sys.argv)
         self.table = Table()
 
-        self.vehicle_list = []
-        self.counter_vehicle = 0
+        # Object Motion
+        self.motion = Motion(self.table)
 
         # Frame Rate
         x, y = video_url["Frame rate"]
@@ -94,10 +97,7 @@ class OpticalFlowDense:
                 mask = np.zeros_like(frame)
                 mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
-                self.vehicle_list, self.counter_vehicle = detect_vehicle(img=frame, mask=mask,
-                                                                         vehicles=self.vehicle_list,
-                                                                         counter_vehicle=self.counter_vehicle,
-                                                                         table=self.table)
+                self.motion.detect_vehicle(img=frame, mask=mask)
 
                 log(0, f"Iteration: {self.iterations}")
                 self.iterations += 1

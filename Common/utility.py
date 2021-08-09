@@ -29,7 +29,7 @@ def log(info, msg):
     print(Style.RESET_ALL)
 
 
-def set_text(img, text, pos, font=cv.FONT_HERSHEY_PLAIN, dim=2, color=Color.MAGENTA, thickness=2):
+def set_text(img, text, pos, font=cv.FONT_HERSHEY_PLAIN, dim: float = 2, color=Color.MAGENTA, thickness=2):
     r"""
     Draw text into image.
 
@@ -95,84 +95,27 @@ def get_barycenter(point):
     """
     return tuple(map(lambda point: round(point / 2), point))
 
-def check_exit_to_the_scene(img, coordinates):
+
+def check_exit_to_the_scene(img, coordinates, max_value=35):
     r"""
     The functions checks if the vehicle leave to the scene.
 
     :param img: shape of image.
     :param coordinates: coordinates of the vehicle.
+    :param max_value: maximum value to consider a vehicle out of the scene.
+
+    :return: True if the vehicle is out of the scene, otherwise False.
     """
+
     (x_start, y_start), (x_end, y_end) = coordinates
     height, width = img.shape
 
-
-    raise NotImplementedError
-
-def get_distance_bounding_box(boxes, new_coordinates, new_list, counter, table, img):
-    r"""
-    Get the minimum distance between all bounding boxes.
-
-    :param boxes: list of the bounding boxes.
-    :param new_coordinates: coordinates of the next bounding box.
-    :param new_list: list that contains the vehicles to the next frame.
-    :param counter: number of total vehicles.
-    :param table: object to update the table.
-    :param img: img to draw in.
-    """
-
-    MAX_DISTANCE = 15  # Distance in pixel
-
-    start, end = new_coordinates
-    new_barycenter = get_barycenter(end)
-
-    min_distance = 0
-    current_item = []
-
-    for box in boxes:
-        _name, _coordinates, _color, _velocity = box
-
-        _start, _end = _coordinates
-        _barycenter = get_barycenter(_end)
-
-        distance = calc_distance(new_barycenter, _barycenter)
-
-        if MAX_DISTANCE > distance > 0:
-            if min_distance == 0 or distance < min_distance:
-                min_distance = distance
-                current_item = [_name, _coordinates, _color, _velocity]
-
-    if min_distance != 0:
-        # Update list vehicles with the next bounding box specification
-        for index, box in enumerate(boxes):
-            current_name, _, _, _ = current_item
-
-            if current_name in box:
-                # Update vehicle to the scene
-                _name, _coordinates, _color, _velocity = current_item
-                log(0, f"Update vehicle: {_name}")
-                new_item = [_name, new_coordinates, _color, _velocity]
-                new_list.append(new_item)
-                draw_vehicle(img, new_coordinates, _name, _color)
-
-                # Remove old item vehicle into list
-                log(0, f"Remove vehicle in list: {_name}")
-                del boxes[index]
-                break
+    if (x_start <= max_value and x_end <= max_value) or (x_start >= width - max_value and x_end >= width - max_value):
+        # Check x-coordinate
+        return True
+    elif (y_start <= max_value and y_end <= max_value) or (
+            y_start >= height - max_value and y_end >= height - max_value):
+        # Check y-coordinate
+        return True
     else:
-        # New vehicle added to the scene
-        name = f"Vehicle {counter}"
-        log(0, f"Added the new vehicle: {name}")
-        velocity = 0
-        color = get_random_color()
-
-        # Update vehicles list
-        item = [name, new_coordinates, color, velocity]
-        new_list.append(item)
-        draw_vehicle(img, new_coordinates, name, color)
-
-        # Update table
-        table.add_row(item)
-
-        counter += 1
-
-    return boxes, new_list, counter
+        return False
