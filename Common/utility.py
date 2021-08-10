@@ -62,7 +62,7 @@ def get_random_color():
     return tuple((int(color[0]), int(color[1]), int(color[2])))
 
 
-def draw_vehicle(vehicles, img):
+def draw_vehicles(vehicles, img):
     r"""
     Draw the bounding box of a vehicle.
 
@@ -73,7 +73,6 @@ def draw_vehicle(vehicles, img):
     height, width, _ = img.shape
 
     for vehicle in vehicles:
-        print(vehicle)
         name, coordinates, color, _ = vehicle
 
         thick = int((height + width) // 900)
