@@ -2,6 +2,7 @@ import cv2 as cv
 
 import Common.color as Color
 import Common.utility as Utility
+from Common.utility import log
 
 
 def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5), iter_dilate=4, VALUE_AREA=150):
@@ -33,6 +34,32 @@ def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5),
         cv.rectangle(img, (x, y), (x + w, y + h), Color.RED, 2)
 
 
+def morphological_operations(mask):
+    r"""
+    Performs morphological operations on the mask.
+
+    :param mask: mask of img.
+    :return contours: contours detect by mask.
+    """
+
+    img_gray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
+    _, img_bin = cv.threshold(img_gray, 20, 255, cv.THRESH_BINARY)
+
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
+    img_erode = cv.erode(img_bin, kernel, iterations=8)
+    img_dilate = cv.dilate(img_erode, kernel, iterations=12)
+
+    contours, _ = cv.findContours(img_dilate, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+
+    mask_binary = cv.resize(img_dilate, (400, 400))
+    mask_binary = cv.cvtColor(mask_binary, cv.COLOR_GRAY2RGB)
+    Utility.set_text(mask_binary, str(len(contours)), (320, 380), color=Color.RED, thickness=3)
+    cv.imshow("Binary mask", mask_binary)
+    cv.waitKey(1)
+
+    return contours
+
+
 class Motion:
     r"""
     Class to detect moving vehicles.
@@ -60,20 +87,7 @@ class Motion:
         :param mask: mask of img.
         """
 
-        img_gray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
-        _, img_bin = cv.threshold(img_gray, 20, 255, cv.THRESH_BINARY)
-
-        kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
-        img_erode = cv.erode(img_bin, kernel, iterations=8)
-        img_dilate = cv.dilate(img_erode, kernel, iterations=12)
-
-        contours, _ = cv.findContours(img_dilate, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-
-        mask_binary = cv.resize(img_dilate, (400, 400))
-        mask_binary = cv.cvtColor(mask_binary, cv.COLOR_GRAY2RGB)
-        Utility.set_text(mask_binary, str(len(contours)), (320, 380), color=Color.RED, thickness=3)
-        cv.imshow("Binary mask", mask_binary)
-        cv.waitKey(1)
+        contours = morphological_operations(mask)
 
         if len(self.prev_vehicles) == 0:
             r"""
@@ -86,7 +100,7 @@ class Motion:
                 area = cv.contourArea(cnt)
 
                 if area <= self.max_area:
-                    # Utility.log(0, f"Counter deleted [{area}]! (if motion)")
+                    # log(0, f"Counter deleted [{area}]! (if motion)")
                     continue
 
                 color = Utility.get_random_color()
@@ -96,11 +110,11 @@ class Motion:
                 velocity = 0
 
                 item = [name, coordinates, color, velocity]
-                Utility.log(0, f"Added the new vehicle: {name}")
+                log(0, f"Added the new {name}")
 
                 self.current_vehicles.append(item)
                 self.table.add_row(item)
-                Utility.draw_vehicle([item], img)
+                Utility.draw_vehicles([item], img)
 
                 self.counter += 1
         else:
@@ -113,13 +127,19 @@ class Motion:
                 area = cv.contourArea(cnt)
 
                 if area <= self.max_area:
-                    # Utility.log(0, f"Counter deleted! [{area}] (else motion)")
+                    # log(0, f"Counter deleted! [{area}] (else motion)")
                     continue
 
-                new_coordinates = ((x, y), (x + w, y + h))
-
                 # Added new vehicles.
-                self.add_new_vehicles(new_coordinates=new_coordinates, img=img)
+                self.add_new_vehicles(new_coordinates=((x, y), (x + w, y + h)), img=img)
+
+            for vehicle in self.prev_vehicles:
+                self.table.delete_row(vehicle[0])
+
+                try:
+                    del self.vehicles_stationary[vehicle[0]]
+                except KeyError:
+                    pass
 
         self.prev_vehicles = self.current_vehicles.copy()
         self.current_vehicles = []
@@ -137,83 +157,87 @@ class Motion:
         min_distance, current_item = self.get_distance(new_coordinates,
                                                        max_distance=max_distance)
 
-        # Vehicle information
-        name, coordinates, color, velocity = current_item
+        if len(current_item) > 0:
 
-        if Utility.check_exit_to_the_scene(img, coordinates):
-            r"""
-            Check if the vehicles no longer present (out of the scene).
-            """
+            # Vehicle information
+            name, coordinates, color, velocity = current_item
 
-            Utility.log(0, f"Remove vehicle: {name} (not displayed)")
-            # self.table.delete_row(name)
+            if Utility.check_exit_to_the_scene(img, coordinates):
+                r"""
+                Check if the vehicles no longer present (out of the scene).
+                """
+                log(0, f"Remove {name} (not displayed)")
 
-        elif min_distance == 0:
-            r"""
-            Detects if there are stationary vehicles.
-            """
+            elif min_distance == 0:
+                r"""
+                Detects if there are stationary vehicles.
+                """
 
-            # Temporary dict to modify it a run time.
-            tmp_vehicles_stationary = self.vehicles_stationary
+                # Temporary dict to modify it a run time.
+                tmp_vehicles_stationary = self.vehicles_stationary
 
-            for index, vehicle in enumerate(self.vehicles_stationary.items()):
-                name_stat = vehicle[0]
+                for index, vehicle in enumerate(self.vehicles_stationary.items()):
+                    name_stat = vehicle[0]
 
-                if name_stat == name:
-                    # Found vehicle on vehicles_stationary list.
-                    num_stat = vehicle[1] - 1
+                    if name_stat == name:
+                        # Found vehicle on vehicles_stationary list.
+                        num_stat = vehicle[1] - 1
 
-                    if num_stat != 0:
-                        # The vehicle is still shown
-                        tmp_vehicles_stationary[name_stat] = num_stat
-                        vehicles_to_draw.append(current_item)
-                        self.current_vehicles.append(current_item)
+                        if num_stat != 0:
+                            # The vehicle is still shown
+                            tmp_vehicles_stationary[name_stat] = num_stat
+                            vehicles_to_draw.append(current_item)
 
-                    elif num_stat == 0:
-                        # Delete vehicle in stationary list. No tracking.
-                        del tmp_vehicles_stationary[name_stat]
+                            self.current_vehicles.append(current_item)
+                            self.prev_vehicles = delete_vehicle(self.prev_vehicles, name)
+
+                        elif num_stat == 0:
+                            # Delete vehicle in stationary list. No tracking.
+                            del tmp_vehicles_stationary[name_stat]
+
                         break
 
-                if index + 1 == len(tmp_vehicles_stationary):
-                    # Vehicle wasn't on vehicles_stationary list.
-                    tmp_vehicles_stationary[name_stat] = self.num_frame_to_remove_vehicle
+                    if index + 1 == len(tmp_vehicles_stationary):
+                        # Vehicle wasn't on vehicles_stationary list.
+                        tmp_vehicles_stationary[name_stat] = self.num_frame_to_remove_vehicle
+                        vehicles_to_draw.append(current_item)
+
+                        self.current_vehicles.append(current_item)
+                        self.prev_vehicles = delete_vehicle(self.prev_vehicles, name)
+
+                if len(self.vehicles_stationary) == 0:
+                    log(0, f"Added new {name} as stationary vehicle.")
+                    tmp_vehicles_stationary[name] = self.num_frame_to_remove_vehicle
                     vehicles_to_draw.append(current_item)
+
                     self.current_vehicles.append(current_item)
+                    self.prev_vehicles = delete_vehicle(self.prev_vehicles, name)
 
-            if len(self.vehicles_stationary) == 0:
-                tmp_vehicles_stationary[name] = self.num_frame_to_remove_vehicle
-                vehicles_to_draw.append(current_item)
-                self.current_vehicles.append(current_item)
+                self.vehicles_stationary = tmp_vehicles_stationary
 
-            self.vehicles_stationary = tmp_vehicles_stationary
+            elif min_distance < max_distance:
+                r"""
+                Added new vehicles when present at the previous frame.
+                """
 
-        elif min_distance < max_distance:  # TODO prima la condizione era min_distance != 0 (per ripristino versione)
-            r"""
-            Added new vehicles when present at the previous frame.
-            """
+                # Update list vehicles with the next bounding box (vehicle) specification.
+                for index, box in enumerate(self.prev_vehicles):
 
-            # Update list vehicles with the next bounding box (vehicle) specification.
-            for index, box in enumerate(self.prev_vehicles):
+                    if name in box:
+                        # Update vehicle to the scene
+                        log(0, f"Update {name} with min_distance {min_distance}")
+                        new_item = [name, new_coordinates, color, velocity]
+                        self.current_vehicles.append(new_item)
+                        self.prev_vehicles = delete_vehicle(self.prev_vehicles, name)
+                        vehicles_to_draw.append(current_item)
 
-                if name in box:
-                    # Update vehicle to the scene
-                    Utility.log(0, f"Update vehicle: {name} with min_distance {min_distance}")
-                    new_item = [name, new_coordinates, color, velocity]
-                    self.current_vehicles.append(new_item)
-                    vehicles_to_draw.append(current_item)
+                        # Remove the vehicle if it was previously stationary
+                        try:
+                            del self.vehicles_stationary[name]
+                        except KeyError:
+                            pass
 
-                    # Remove old item vehicle into list
-                    del self.prev_vehicles[index]
-
-                    # Remove the vehicle if it was previously stationary
-                    for vehicle in self.vehicles_stationary.items():
-                        name_stat = vehicle[0]
-
-                        if name_stat == name:
-                            del self.vehicles_stationary[name_stat]
-                            break
-
-                    break
+                        break
         else:
             r"""
             Added new vehicles when not present at the previous frame.
@@ -221,21 +245,21 @@ class Motion:
 
             # New vehicle added to the scene
             name = f"Vehicle {self.counter + 1}"
-            Utility.log(0, f"Added the new vehicle: {name}")
+            log(0, f"Added the new {name}")
             velocity = 0
             color = Utility.get_random_color()
 
             # Update vehicles list
             item = [name, new_coordinates, color, velocity]
             self.current_vehicles.append(item)
-            vehicles_to_draw.append(current_item)
+            vehicles_to_draw.append(item)
 
             # Update table
             self.table.add_row(item)
 
             self.counter += 1
 
-        Utility.draw_vehicle(vehicles_to_draw, img)
+        Utility.draw_vehicles(vehicles_to_draw, img)
 
     def get_distance(self, new_coordinates, max_distance, default_distance=20):
         r"""
@@ -263,15 +287,28 @@ class Motion:
 
             distance = Utility.get_length(new_barycenter, _barycenter)
 
-            if max_distance > distance >= 0:  # TODO prima la condizione era MAX_DISTANCE > distance > 0 (per ripristino versione)
+            if max_distance > distance >= 0:
 
-                if min_distance == default_distance or distance <= min_distance:  # TODO prima la condizione era min_distance == 0 or distance < min_distance (per ripristino versione)
+                if min_distance == default_distance or distance <= min_distance:
                     min_distance = distance
                     current_item = [name, coordinates, color, velocity]
-                    Utility.log(0, f"Update bb for vehicle {name}")
-
-            else:
-                Utility.log(0,
-                            f"No match [Distance] : {distance}, between cordinates [{_barycenter}] and [{new_barycenter}]")
+                    log(0, f"Update bounding box for {name}, [Distance]: {min_distance}")
 
         return min_distance, current_item
+
+
+def delete_vehicle(list, name):
+    r"""
+    Delete vehicle by name in list.
+
+    :param list: list of vehicles.
+    :param name: name of vehicle to be deleted.
+
+    :return: list updated.
+    """
+    for index, vehicle in enumerate(list):
+        if vehicle[0] == name:
+            del list[index]
+            break
+
+    return list
