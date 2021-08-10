@@ -73,7 +73,7 @@ class OpticalFlowDense:
 
             if ret:
 
-                frame = cv.bilateralFilter(frame, 9, 75, 75)
+                frame = cv.medianBlur(frame, ksize=5)
                 frame = cv.resize(frame, (self.width, self.height))
                 gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
@@ -104,7 +104,7 @@ class OpticalFlowDense:
                 dense_flow = cv.addWeighted(frame, 1, mask_rgb, 2, 0)
 
                 # cv.imshow("Dense Optical Flow", dense_flow)
-                cv.imshow("Mask", cv.resize(mask, (400, 400)))
+                # cv.imshow("Mask", cv.resize(mask, (400, 400)))
                 cv.imshow(WINDOW_OPTICAL_FLOW, frame)
 
                 # Update frame
