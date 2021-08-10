@@ -62,6 +62,23 @@ def get_random_color():
     return tuple((int(color[0]), int(color[1]), int(color[2])))
 
 
+def get_area(contour, min_area=50):
+    r"""
+    Get the area of a specific contour.
+
+    :param contour: contour.
+    :param min_area: minimum area value.
+
+    :return: True if the contour is to be discarded, false otherwise.
+    """
+
+    area = cv.contourArea(contour)
+    peri = cv.arcLength(contour, True)
+    approx = cv.approxPolyDP(contour, 0.04 * peri, True)
+
+    return area <= min_area or len(approx) < 4
+
+
 def draw_vehicles(vehicles, img):
     r"""
     Draw the bounding box of a vehicle.
@@ -99,7 +116,7 @@ def get_barycenter(point):
     return tuple(map(lambda point: round(point / 2), point))
 
 
-def check_exit_to_the_scene(img, coordinates, max_value=35):
+def check_exit_to_the_scene(img, coordinates, max_value=10):
     r"""
     The functions checks if the vehicle leave to the scene.
 

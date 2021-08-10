@@ -42,16 +42,16 @@ def morphological_operations(mask):
     :return contours: contours detect by mask.
     """
 
-    img_gray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
-    _, img_bin = cv.threshold(img_gray, 20, 255, cv.THRESH_BINARY)
+    mask_gray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
+    _, mask_bin = cv.threshold(mask_gray, 20, 255, cv.THRESH_BINARY)
 
     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
-    img_erode = cv.erode(img_bin, kernel, iterations=8)
-    img_dilate = cv.dilate(img_erode, kernel, iterations=12)
+    mask_erode = cv.erode(mask_bin, kernel, iterations=15)
+    mask_dilate = cv.dilate(mask_erode, kernel, iterations=4)
 
-    contours, _ = cv.findContours(img_dilate, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+    contours, _ = cv.findContours(mask_dilate, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
 
-    mask_binary = cv.resize(img_dilate, (400, 400))
+    mask_binary = cv.resize(mask_dilate, (400, 400))
     mask_binary = cv.cvtColor(mask_binary, cv.COLOR_GRAY2RGB)
     Utility.set_text(mask_binary, str(len(contours)), (320, 380), color=Color.RED, thickness=3)
     cv.imshow("Binary mask", mask_binary)
@@ -76,8 +76,6 @@ class Motion:
         self.current_vehicles = []
         self.vehicles_stationary = {}
 
-        # Constant
-        self.max_area = 900
         self.num_frame_to_remove_vehicle = 3
 
     def detect_vehicle(self, img, mask):
@@ -97,9 +95,8 @@ class Motion:
 
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
-                area = cv.contourArea(cnt)
 
-                if area <= self.max_area:
+                if Utility.get_area(cnt):
                     # log(0, f"Counter deleted [{area}]! (if motion)")
                     continue
 
@@ -124,9 +121,8 @@ class Motion:
 
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
-                area = cv.contourArea(cnt)
 
-                if area <= self.max_area:
+                if Utility.get_area(cnt):
                     # log(0, f"Counter deleted! [{area}] (else motion)")
                     continue
 
