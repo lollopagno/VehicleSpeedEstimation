@@ -25,6 +25,8 @@ def log(info, msg):
         print(Fore.RED + f"[ERROR] {msg}")
     elif info == 2:
         print(Fore.BLUE + f"[TABLE] {msg}")
+    elif info == 3:
+        print(Fore.GREEN + f"[PAINTING] {msg}")
 
     print(Style.RESET_ALL)
 
@@ -89,8 +91,9 @@ def draw_vehicles(vehicles, img):
 
     height, width, _ = img.shape
 
+    log(3, vehicles)
     for vehicle in vehicles:
-        name, coordinates, color, _ = vehicle
+        name, coordinates, color, _ = vehicle[0]
 
         thick = int((height + width) // 900)
 
@@ -139,3 +142,41 @@ def check_exit_to_the_scene(img, coordinates, max_value=10):
         return True
     else:
         return False
+
+
+def delete_item_in_list(list, name):
+    r"""
+    Delete vehicle by name in list.
+
+    :param list: list of vehicles.
+    :param name: name of vehicle to be deleted.
+
+    :return: list updated.
+    """
+    length = len(list)
+
+    for index, vehicle in enumerate(list):
+        if vehicle[0] == name:
+            del list[index]
+            break
+
+    if length == len(list):
+        raise Exception("No items has been deleted")
+
+    return list
+
+
+def check_vehicle_in_list(list, name):
+    r"""
+    Check if name is present in list. If present delete this name to list.
+
+    :param list: list to find name.
+    :param name: vehicle name.
+    """
+
+    for index, vehicle in enumerate(list):
+        if vehicle[0][0] == name:
+            del list[index]
+            break
+
+    return list
