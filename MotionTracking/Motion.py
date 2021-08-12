@@ -66,7 +66,7 @@ def morphological_operations(mask):
     return contours
 
 
-def get_distance(new_coordinates, list, max_distance, default_distance=20):
+def get_distance(new_coordinates, list, max_distance, default_distance=20, delete_item=True):
     """
     Calculates the distance among all vehicles detected.
 
@@ -87,7 +87,7 @@ def get_distance(new_coordinates, list, max_distance, default_distance=20):
     min_distance = default_distance
     result = None
 
-    for box in list:
+    for index, box in enumerate(list):
 
         _start, _end = box.coordinates
         _barycenter = Utility.get_barycenter(_end)
@@ -99,8 +99,9 @@ def get_distance(new_coordinates, list, max_distance, default_distance=20):
 
             if min_distance == default_distance or distance <= min_distance:
                 # Updates variables
-                min_distance = distance
-                result = box
+                min_distance = distance  # Minimum distance between vehicles
+                result = box  # Vehicle to be returned
+
                 log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance}")
 
     return min_distance, result
@@ -305,24 +306,19 @@ class Motion:
                 Adds new vehicles present to the previous frame.
                 """
 
-                # Updates list vehicles with the next bounding box (vehicle) specification.
-                for index, box in enumerate(self.prev_vehicles):
+                # Updates the coordinates of the vehicle to the scene
+                log(0, f"Update {vehicle.name} with min_distance {min_distance}")
+                vehicle.set_coordinates(new_coordinates)
 
-                    if vehicle.name == box.name:
-                        # Updates the coordinates of the vehicle to the scene
-                        log(0, f"Update {box.name} with min_distance {min_distance}")
-                        box.set_coordinates(new_coordinates)
+                self.current_vehicles.append(vehicle)
+                self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                rows_to_add.append(vehicle)
 
-                        self.current_vehicles.append(box)
-                        self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, box.name)
-                        rows_to_add.append(box)
-
-                        try:
-                            # Remove the vehicle if it was previously stationary
-                            del self.vehicles_stationary[box.name]
-                        except KeyError:
-                            pass
-                        break
+                try:
+                    # Remove the vehicle if it was previously stationary
+                    del self.vehicles_stationary[vehicle.name]
+                except KeyError:
+                    pass
         else:
             """
             Adds new vehicles when not present at the previous frame.
