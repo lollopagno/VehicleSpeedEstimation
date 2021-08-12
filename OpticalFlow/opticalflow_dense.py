@@ -97,7 +97,7 @@ class OpticalFlowDense:
                 mask = np.zeros_like(frame)
                 mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
-                self.motion.detect_vehicle(img=frame, mask=mask)
+                self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations)
 
                 log(0, f"Iteration: {self.iterations}")
                 self.iterations += 1
