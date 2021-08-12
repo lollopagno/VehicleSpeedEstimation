@@ -118,26 +118,16 @@ def get_barycenter(point):
     :param point: end point (x_max, y_max) of the bounding box.
     :return: coordinates of the barycenter.
     """
-    return tuple(map(lambda point: round(point / 2), point))
+    return tuple(map(lambda point: point / 2, point))
 
 
-def get_velocity(point_1, point_2, fps):
+def get_velocity(distance, fps):
     r"""
     ....
     """
     # Conversion factors
     ms2kmh = 3.6
     px2m = 0.075
-
-    _, end_1 = point_1
-    _, end_2 = point_2
-
-    bary_1 = get_barycenter(end_1)
-    bary_2 = get_barycenter(end_2)
-
-    # TODO fix coordinates to get velocity!
-    distance = get_length(bary_1, bary_2)
-    print(f"Distance: {distance}, bary_1: {bary_1}, bary_2: {bary_2}")
 
     return distance * ms2kmh * fps * px2m
 

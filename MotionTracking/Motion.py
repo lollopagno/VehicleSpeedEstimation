@@ -293,11 +293,13 @@ class Motion:
                     if vehicle.name == box.name:
                         # Update vehicle to the scene
                         log(0, f"Update {box.name} with min_distance {min_distance}")
-                        box.set_coordinates(new_coordinates)
 
-                        box.set_velocity(Utility.get_velocity(point_1=vehicle.coordinates,
-                                                              point_2=new_coordinates,
-                                                              fps=self.fps))
+                        box.set_coordinates(new_coordinates)
+                        velocity = (Utility.get_velocity(distance=min_distance,
+                                                         fps=self.fps))
+
+                        self.table.update_velocity(box.name, velocity)
+                        box.set_velocity(velocity)
 
                         self.current_vehicles.append(box)
                         self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, box.name)
