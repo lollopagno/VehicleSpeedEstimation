@@ -33,8 +33,8 @@ class Table(QWidget):
 
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels([COLUMN_VEHICLE, COLUMN_VELOCITY, COLUMN_COLOR])
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Table in read-only
 
-        # Show widget
         self.show()
 
     def update_table(self, name_vehicle, velocity):
@@ -91,9 +91,9 @@ class Table(QWidget):
                     except Exception as e:
                         log(1, f"Error in DELETE ROW TABLE: {e}")
 
-    def add_row(self, rows):
+    def add_rows(self, rows):
         r"""
-        Added row in the table.
+        Added rows in the table.
 
         :param rows: rows to add.
         """
@@ -138,15 +138,10 @@ class Table(QWidget):
                     try:
                         cell = self.table.item(row, column).text()
 
-                        if cell == name_cell:
+                        if cell == name_cell[0]:
                             is_present = True
                             break
                     except Exception as e:
                         log(1, f"Error in CHECK CELL: {e}")
 
         return is_present
-
-    @pyqtSlot()
-    def on_click(self):
-        for currentQTableWidgetItem in self.table.selectedItems():
-            print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
