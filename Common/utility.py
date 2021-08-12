@@ -176,6 +176,7 @@ def check_vehicle_in_list(list, name):
     :param name: vehicle name.
     """
 
+    # TODO le coordinate le posso aggiornare qua?? invece che quanto ritorno il risultato??
     for index, vehicle in enumerate(list):
         if vehicle.name == name:
             del list[index]

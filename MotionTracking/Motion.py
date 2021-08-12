@@ -102,6 +102,9 @@ def get_distance(new_coordinates, list, max_distance, default_distance=20, delet
                 min_distance = distance  # Minimum distance between vehicles
                 result = box  # Vehicle to be returned
 
+                if min_distance == 0:
+                    break
+
                 log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance}")
 
     return min_distance, result
@@ -195,7 +198,7 @@ class Motion:
                                                                    img=img)
 
                 if draw is not None:
-                    # Checks if the vehicle was already tracked
+                    # Checks if the vehicle was already tracked to update the new coordinates
                     vehicles_to_draw = Utility.check_vehicle_in_list(vehicles_to_draw, draw.name)
                     vehicles_to_draw.append(draw)
 
@@ -323,6 +326,7 @@ class Motion:
             """
             Adds new vehicles when not present at the previous frame.
             """
+            # TODO non ho già calcolato la distanza con min_distance (conviene passarlo come parametro)??
             ret, result = self.check_repaint_vehicles(new_coordinates, "Repaint in add_vehicles ")
 
             if not ret:
