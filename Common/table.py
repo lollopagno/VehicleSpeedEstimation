@@ -99,18 +99,18 @@ class Table(QWidget):
         """
 
         for item in rows:
-            if not self.check_cell(COLUMN_VEHICLE, item):
-                name, _, color, velocity = item
+            if not self.check_cell(COLUMN_VEHICLE, item.name):
+                color = item.color
                 color_qt = QColor.fromRgb(color[2], color[1], color[0])
-                log(2, f"Add row: {name}, {velocity}, {color}")
+                log(2, f"Add row: {item.name}, {item.velocity}, {color}")
 
                 current_row = self.table.rowCount()
                 item_color = QTableWidgetItem()
                 item_color.setBackground(color_qt)
 
                 self.table.insertRow(current_row)
-                self.table.setItem(current_row, 0, QTableWidgetItem(name))
-                self.table.setItem(current_row, 1, QTableWidgetItem(f"{velocity} km/h"))
+                self.table.setItem(current_row, 0, QTableWidgetItem(item.name))
+                self.table.setItem(current_row, 1, QTableWidgetItem(f"{item.velocity} km/h"))
                 self.table.setItem(current_row, 2, item_color)
                 self.table.update()
 
@@ -138,7 +138,7 @@ class Table(QWidget):
                     try:
                         cell = self.table.item(row, column).text()
 
-                        if cell == name_cell[0]:
+                        if cell == name_cell:
                             is_present = True
                             break
                     except Exception as e:

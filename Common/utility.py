@@ -91,13 +91,15 @@ def draw_vehicles(vehicles, img):
 
     height, width, _ = img.shape
 
-    log(3, vehicles)
     for vehicle in vehicles:
-        name, coordinates, color, _ = vehicle[0]
+        log(3, vehicle.name)
 
         thick = int((height + width) // 900)
 
-        start, end = coordinates
+        start, end = vehicle.coordinates
+        name = vehicle.name
+        color = vehicle.color
+
         cv.rectangle(img, start, end, color, thick + 3)
 
         x, y = start
@@ -156,7 +158,7 @@ def delete_item_in_list(list, name):
     length = len(list)
 
     for index, vehicle in enumerate(list):
-        if vehicle[0] == name:
+        if vehicle.name == name:
             del list[index]
             break
 
@@ -175,7 +177,7 @@ def check_vehicle_in_list(list, name):
     """
 
     for index, vehicle in enumerate(list):
-        if vehicle[0][0] == name:
+        if vehicle.name == name:
             del list[index]
             break
 

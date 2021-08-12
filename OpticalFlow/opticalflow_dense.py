@@ -72,6 +72,7 @@ class OpticalFlowDense:
             ret, frame = self.camera.read()
 
             if ret:
+                log(0, f"Iteration: {self.iterations}")
 
                 frame = cv.medianBlur(frame, ksize=5)
                 frame = cv.resize(frame, (self.width, self.height))
@@ -99,7 +100,6 @@ class OpticalFlowDense:
 
                 self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations)
 
-                log(0, f"Iteration: {self.iterations}")
                 self.iterations += 1
                 dense_flow = cv.addWeighted(frame, 1, mask_rgb, 2, 0)
 
