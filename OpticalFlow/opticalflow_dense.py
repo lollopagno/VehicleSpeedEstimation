@@ -1,11 +1,14 @@
+import sys
+
 import cv2 as cv
 import numpy as np
-from Common.load_video import get_video
-from Frame_rate import FrameRate
-from MotionTracking.Motion import detect_car
-from Common.table import Table
-import sys
 from PyQt5.QtWidgets import QApplication
+
+from Common.load_video import get_video
+from Common.table import Table
+from Common.utility import log
+from Frame_rate import FrameRate
+from MotionTracking.Motion import Motion
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Dense"
 
@@ -20,6 +23,9 @@ def callback_mouse(event, x, y, flag, param):
 
 
 class OpticalFlowDense:
+    r"""
+    Class to detect moving vehicles by implementation of optical flow dense.
+    """
 
     def __init__(self, video_url, height_cam=512, width_cam=750, show_log=True):
         # Camera
@@ -31,8 +37,8 @@ class OpticalFlowDense:
         self.app_qt = QApplication(sys.argv)
         self.table = Table()
 
-        self.vehicle_list = []
-        self.counter_vehicle = 0
+        # Object Motion
+        self.motion = Motion(self.table)
 
         # Frame Rate
         x, y = video_url["Frame rate"]
@@ -48,8 +54,8 @@ class OpticalFlowDense:
         cv.setMouseCallback(WINDOW_OPTICAL_FLOW, callback_mouse)
 
         if self.show_log:
-            print("Optical Flow Dense start!")
-            print(f"City: {self.city}")
+            log(0, "Optical Flow Dense start!")
+            log(0, f"City: {self.city}")
 
         self.table.show()
 
@@ -67,7 +73,7 @@ class OpticalFlowDense:
 
             if ret:
 
-                frame = cv.bilateralFilter(frame, 9, 75, 75)
+                frame = cv.medianBlur(frame, ksize=5)
                 frame = cv.resize(frame, (self.width, self.height))
                 gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
@@ -91,16 +97,14 @@ class OpticalFlowDense:
                 mask = np.zeros_like(frame)
                 mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
-                self.vehicle_list, self.counter_vehicle = detect_car(img=frame, mask=mask, vehicles=self.vehicle_list,
-                                                                     counter_vehicle=self.counter_vehicle,
-                                                                     table=self.table)
+                self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations)
 
-                print(f"Iteration: {self.iterations}")
+                log(0, f"Iteration: {self.iterations}")
                 self.iterations += 1
                 dense_flow = cv.addWeighted(frame, 1, mask_rgb, 2, 0)
 
                 # cv.imshow("Dense Optical Flow", dense_flow)
-                cv.imshow("Mask", cv.resize(mask, (400, 400)))
+                # cv.imshow("Mask", cv.resize(mask, (400, 400)))
                 cv.imshow(WINDOW_OPTICAL_FLOW, frame)
 
                 # Update frame
