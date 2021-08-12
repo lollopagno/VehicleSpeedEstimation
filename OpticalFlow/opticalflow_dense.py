@@ -98,7 +98,7 @@ class OpticalFlowDense:
                 mask = np.zeros_like(frame)
                 mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
-                self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations)
+                self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps)
 
                 self.iterations += 1
                 dense_flow = cv.addWeighted(frame, 1, mask_rgb, 2, 0)

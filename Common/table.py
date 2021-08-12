@@ -37,31 +37,31 @@ class Table(QWidget):
 
         self.show()
 
-    def update_table(self, name_vehicle, velocity):
-        r"""
-        Update velocity of the vehicles into table.
-
-        :param name_vehicle: vehicle name.
-        :param velocity: velocity to be updated.
-        """
-
-        log(2, "Update row")
-
-        columns = self.table.columnCount()
-        rows = self.table.rowCount()
-
-        for column in range(columns):
-            column_text = self.table.horizontalHeaderItem(column).text()
-
-            if column_text == COLUMN_VELOCITY:
-
-                for row in range(rows):
-                    cell = self.table.item(row, column).text()
-
-                    if cell == name_vehicle:
-                        # TODO Update the velocity
-                        # self.table.setItem(row, column, QTableWidgetItem(velocity))
-                        pass
+    # def update_table(self, name_vehicle, velocity):
+    #     r"""
+    #     Update velocity of the vehicles into table.
+    #
+    #     :param name_vehicle: vehicle name.
+    #     :param velocity: velocity to be updated.
+    #     """
+    #
+    #     log(2, "Update row")
+    #
+    #     columns = self.table.columnCount()
+    #     rows = self.table.rowCount()
+    #
+    #     for column in range(columns):
+    #         column_text = self.table.horizontalHeaderItem(column).text()
+    #
+    #         if column_text == COLUMN_VELOCITY:
+    #
+    #             for row in range(rows):
+    #                 cell = self.table.item(row, column).text()
+    #
+    #                 if cell == name_vehicle:
+    #                     # TODO Update the velocity
+    #                     # self.table.setItem(row, column, QTableWidgetItem(velocity))
+    #                     pass
 
     def delete_row(self, name_vehicle):
         r"""

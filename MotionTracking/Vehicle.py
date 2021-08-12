@@ -42,7 +42,7 @@ class Vehicle:
         Mark the vehicle as stationary.
         """
         self.is_stationary = True
-        # self.velocity = 0
+        self.velocity = 0
 
     def unmarked_as_stationary(self):
         """

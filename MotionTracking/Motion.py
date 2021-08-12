@@ -110,6 +110,7 @@ class Motion:
         """
         self.counter_vehicle = 0
         self.iteration = 0
+        self.fps = 0
         self.table = table
 
         # Vehicle list
@@ -121,16 +122,19 @@ class Motion:
         # Maximum num frame before deleting the vehicle history
         self.num_frame_to_remove_vehicle_history = 10
 
-    def detect_vehicle(self, img, mask, iter):
+    def detect_vehicle(self, img, mask, iter, fps):
         r"""
         Detect vehicle into img.
         :param img: img.
         :param mask: mask of img.
         :param iter: current iteration.
+        :param fps: current frame per second.
         """
 
-        rows_to_add_to_table = []
         self.iteration = iter
+        self.fps = fps
+
+        rows_to_add_to_table = []
 
         contours = morphological_operations(mask)
 
@@ -290,6 +294,11 @@ class Motion:
                         # Update vehicle to the scene
                         log(0, f"Update {box.name} with min_distance {min_distance}")
                         box.set_coordinates(new_coordinates)
+
+                        box.set_velocity(Utility.get_velocity(point_1=vehicle.coordinates,
+                                                              point_2=new_coordinates,
+                                                              fps=self.fps))
+
                         self.current_vehicles.append(box)
                         self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, box.name)
                         rows_to_add.append(box)

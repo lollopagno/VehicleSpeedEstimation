@@ -121,6 +121,27 @@ def get_barycenter(point):
     return tuple(map(lambda point: round(point / 2), point))
 
 
+def get_velocity(point_1, point_2, fps):
+    r"""
+    ....
+    """
+    # Conversion factors
+    ms2kmh = 3.6
+    px2m = 0.075
+
+    _, end_1 = point_1
+    _, end_2 = point_2
+
+    bary_1 = get_barycenter(end_1)
+    bary_2 = get_barycenter(end_2)
+
+    # TODO fix coordinates to get velocity!
+    distance = get_length(bary_1, bary_2)
+    print(f"Distance: {distance}, bary_1: {bary_1}, bary_2: {bary_2}")
+
+    return distance * ms2kmh * fps * px2m
+
+
 def check_exit_to_the_scene(img, coordinates, max_value=10):
     r"""
     The functions checks if the vehicle leave to the scene.
