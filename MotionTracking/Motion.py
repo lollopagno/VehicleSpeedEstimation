@@ -66,7 +66,7 @@ def morphological_operations(mask):
     return contours
 
 
-def get_distance(new_coordinates, list, max_distance, default_distance=20, delete_item=True):
+def get_distance(new_coordinates, list, max_distance, default_distance=20):
     """
     Calculates the distance among all vehicles detected.
 
@@ -199,8 +199,7 @@ class Motion:
 
                 if draw is not None:
                     # Checks if the vehicle was already tracked to update the new coordinates
-                    vehicles_to_draw = Utility.check_vehicle_in_list(vehicles_to_draw, draw.name)
-                    vehicles_to_draw.append(draw)
+                    vehicles_to_draw = Utility.check_vehicle_in_list(vehicles_to_draw, draw)
 
             Utility.draw_vehicles(vehicles_to_draw, img)
 
@@ -326,7 +325,6 @@ class Motion:
             """
             Adds new vehicles when not present at the previous frame.
             """
-            # TODO non ho già calcolato la distanza con min_distance (conviene passarlo come parametro)??
             ret, result = self.check_repaint_vehicles(new_coordinates, "Repaint in add_vehicles ")
 
             if not ret:
