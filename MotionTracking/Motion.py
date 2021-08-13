@@ -307,23 +307,17 @@ class Motion:
 
                 # Updates the coordinates of the vehicle to the scene
                 log(0, f"Update {vehicle.name} with min_distance {min_distance}")
-                vehicle.set_coordinates(new_coordinates)
 
-                    if vehicle.name == box.name:
-                        # Update vehicle to the scene
-                        log(0, f"Update {box.name} with min_distance {min_distance}")
+                point_1, point_4 = new_coordinates
+                vehicle.set_coordinates(Utility.get_coordinates_bb(point_1=point_1, point_4=point_4))
+                velocity = (Utility.get_velocity(distance=min_distance, fps=self.fps))
 
-                        point_1, point_4 = new_coordinates
-                        box.set_coordinates(Utility.get_coordinates_bb(point_1=point_1, point_4=point_4))
-                        velocity = (Utility.get_velocity(distance=min_distance,
-                                                         fps=self.fps))
+                self.table.update_velocity(vehicle.name, velocity)
+                vehicle.set_velocity(velocity)
 
-                        self.table.update_velocity(box.name, velocity)
-                        box.set_velocity(velocity)
-
-                        self.current_vehicles.append(box)
-                        self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, box.name)
-                        rows_to_add.append(box)
+                self.current_vehicles.append(vehicle)
+                self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                rows_to_add.append(vehicle)
 
                 try:
                     # Remove the vehicle if it was previously stationary
