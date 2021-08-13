@@ -1,4 +1,4 @@
-from Common.utility import get_random_color
+from Common import utility as Utility
 
 num_frame_stationary = 3
 
@@ -9,9 +9,14 @@ class Vehicle:
     """
 
     def __init__(self, name, coordinates):
+
         self.name = name
+
+        # Array with 4 coordinates of the bouding box.
         self.coordinates = coordinates
-        self.color = get_random_color()
+        self.centroid = Utility.get_centroid(coordinates)
+
+        self.color = Utility.get_random_color()
         self.velocity = 0
 
         ### Field to manage stationary vehicles ###
@@ -23,11 +28,12 @@ class Vehicle:
 
     def set_coordinates(self, new_coordinates):
         """
-        Update cordinates.
+        Update cordinates and centroid.
 
         :param new_coordinates: new corddinates.
         """
         self.coordinates = new_coordinates
+        self.centroid = Utility.get_centroid(new_coordinates)
 
     def set_velocity(self, new_value):
         """
