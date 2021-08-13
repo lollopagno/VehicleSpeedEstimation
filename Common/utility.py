@@ -96,11 +96,12 @@ def draw_vehicles(vehicles, img):
 
         thick = int((height + width) // 900)
 
-        start, end = vehicle.coordinates
+        start, end = vehicle.coordinates[0], vehicle.coordinates[3]
         name = vehicle.name
         color = vehicle.color
 
         cv.rectangle(img, start, end, color, thick + 3)
+        cv.circle(img, vehicle.centroid, 2, Color.RED, thick + 3)
 
         x, y = start
 
@@ -111,14 +112,38 @@ def draw_vehicles(vehicles, img):
         set_text(img, num[0], (x + 90, y - 12), color=color, thickness=thick + 1, dim=1.5)
 
 
-def get_barycenter(point):
-    r"""
-    Get barycenter of the bounding box.
-
-    :param point: end point (x_max, y_max) of the bounding box.
-    :return: coordinates of the barycenter.
+def get_coordinates_bb(point_1, point_4):
     """
-    return tuple(map(lambda point: point / 2, point))
+    Get all cordinates of the bouding box.
+
+    :param point_1: start point of the bouding box.
+    :param point_4: end point of the bouding box.
+
+    point_1: (x_start, y_start)
+    point_2: (x_end, y_start)
+    point_3: (x_start, y_end)
+    point_4: (x_end, y_end)
+
+    :return: array with four coordinates of the bouding box.
+    """
+
+    x_start, y_start = point_1
+    x_end, y_end = point_4
+
+    point_2 = (x_end, y_start)
+    point_3 = (x_start, y_end)
+
+    return [point_1, point_2, point_3, point_4]
+
+
+def get_centroid(coordinates):
+    r"""
+    Get centroid of the bounding box.
+
+    :param coordinates: coordinates of the bounding box.
+    :return: coordinates of the centroid.
+    """
+    return np.mean(coordinates, axis=0, dtype=np.int)
 
 
 def get_velocity(distance, fps):
@@ -143,7 +168,7 @@ def check_exit_to_the_scene(img, coordinates, max_value=10):
     :return: True if the vehicle is out of the scene, otherwise False.
     """
 
-    (x_start, y_start), (x_end, y_end) = coordinates
+    (x_start, y_start), (x_end, y_end) = coordinates[0], coordinates[3]
     height, width, _ = img.shape
 
     if (x_start <= max_value and x_end <= max_value) or (x_start >= width - max_value and x_end >= width - max_value):

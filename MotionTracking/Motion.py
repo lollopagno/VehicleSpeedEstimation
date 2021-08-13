@@ -74,18 +74,14 @@ def get_distance(new_coordinates, list, max_distance, default_distance=20):
     :return current_item: information of the vehicle extracted on the basis of new_coordinates.
     """
 
-    start, end = new_coordinates
-    new_barycenter = Utility.get_barycenter(end)
+    new_centroid = Utility.get_centroid(new_coordinates)
 
     min_distance = default_distance
     result = None
 
     for box in list:
-
-        _start, _end = box.coordinates
-        _barycenter = Utility.get_barycenter(_end)
-
-        distance = Utility.get_length(new_barycenter, _barycenter)
+        _centroid = box.centroid
+        distance = Utility.get_length(new_centroid, _centroid)
 
         if max_distance > distance >= 0:
 
@@ -156,7 +152,7 @@ class Motion:
 
                 if not ret:
                     name = f"Vehicle {self.counter_vehicle + 1}"
-                    coordinates = ((x, y), (x + w, y + h))
+                    coordinates = Utility.get_coordinates_bb(point_1=(x, y), point_4=(x + w, y + h))
 
                     v = Vehicle(name, coordinates)
                     log(0, f"Added the new {v.name}")
@@ -294,7 +290,8 @@ class Motion:
                         # Update vehicle to the scene
                         log(0, f"Update {box.name} with min_distance {min_distance}")
 
-                        box.set_coordinates(new_coordinates)
+                        point_1, point_4 = new_coordinates
+                        box.set_coordinates(Utility.get_coordinates_bb(point_1=point_1, point_4=point_4))
                         velocity = (Utility.get_velocity(distance=min_distance,
                                                          fps=self.fps))
 
@@ -323,6 +320,8 @@ class Motion:
                 log(0, f"Added the new {name}")
 
                 # Update vehicles list
+                point_1, point_4 = new_coordinates
+                new_coordinates = Utility.get_coordinates_bb(point_1=point_1, point_4=point_4)
                 v = Vehicle(name, new_coordinates)
                 self.current_vehicles.append(v)
 
