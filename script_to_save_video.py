@@ -3,7 +3,7 @@ import pafy
 
 from Common import url as Url
 
-PATH = "video/cambridge2.avi"
+PATH = "video/cambridge3.avi"
 
 video_pafy = pafy.new(Url.CAMBRIDGE['Url'])
 play = video_pafy.getbest()
@@ -21,6 +21,7 @@ while cap.isOpened():
 
     if ret:
         video.write(frame)
+        frame = cv.resize(frame, (650, 650))
         cv.imshow("OpenCv", frame)
         cv.waitKey(20)
 
