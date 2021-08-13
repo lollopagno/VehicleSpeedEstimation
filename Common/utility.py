@@ -204,17 +204,18 @@ def delete_item_in_list(list, name):
     return list
 
 
-def check_vehicle_in_list(list, name):
+def check_vehicle_in_list(list, vehicle_to_search):
     r"""
-    Check if name is present in list. If present delete this name to list.
+    Check if name is present in list. If present, deletes this name in the list and reinsertes it.
 
-    :param list: list to find name.
-    :param name: vehicle name.
+    :param list: list to search name.
+    :param vehicle_to_search: vehicle to search.
     """
 
     for index, vehicle in enumerate(list):
-        if vehicle.name == name:
+        if vehicle.name == vehicle_to_search.name:
             del list[index]
             break
 
+    list.append(vehicle_to_search)
     return list
