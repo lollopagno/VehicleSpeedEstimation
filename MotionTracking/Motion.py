@@ -60,7 +60,10 @@ def morphological_operations(mask):
     mask_binary = cv.cvtColor(mask_binary, cv.COLOR_GRAY2RGB)
 
     Utility.set_text(mask_binary, str(len(contours)), (320, 380), color=Color.RED, thickness=3)
-    cv.imshow("Binary mask", mask_binary)
+
+    mask = cv.resize(mask, (400, 400))
+    stack = Utility.stack_images(1, ([mask_binary, mask]))
+    cv.imshow("Masks", stack)
     cv.waitKey(1)
 
     return contours
@@ -230,7 +233,7 @@ class Motion:
         # Updates vehicles history list
         self.deleted_vehicles = tmp_list.copy()
 
-    def add_new_vehicles(self, new_coordinates, img, max_distance=15):
+    def add_new_vehicles(self, new_coordinates, img, max_distance=30):
         """
         Adds new vehicles based on the minimum distance between all bounding boxes.
 

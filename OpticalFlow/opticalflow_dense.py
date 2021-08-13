@@ -104,7 +104,6 @@ class OpticalFlowDense:
                 # dense_flow = cv.addWeighted(frame, 1, mask_rgb, 2, 0)
 
                 # cv.imshow("Dense Optical Flow", dense_flow)
-                cv.imshow("Mask", cv.resize(mask, (400, 400)))
                 cv.imshow(WINDOW_OPTICAL_FLOW, frame)
 
                 # Update frame

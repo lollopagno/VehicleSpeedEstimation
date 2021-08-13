@@ -64,12 +64,13 @@ def get_random_color():
     return tuple((int(color[0]), int(color[1]), int(color[2])))
 
 
-def get_area(contour, min_area=50):
+def get_area(contour, min_area=50, max_area=200):
     r"""
     Get the area of a specific contour.
 
     :param contour: contour.
     :param min_area: minimum area value.
+    :param max_area: maximum area value.
 
     :return: True if the contour is to be discarded, false otherwise.
     """
@@ -78,7 +79,7 @@ def get_area(contour, min_area=50):
     peri = cv.arcLength(contour, True)
     approx = cv.approxPolyDP(contour, 0.04 * peri, True)
 
-    return area <= min_area or len(approx) < 4
+    return (min_area >= area > max_area) or len(approx) < 4
 
 
 def draw_vehicles(vehicles, img):
@@ -219,3 +220,57 @@ def check_vehicle_in_list(list, vehicle_to_search):
 
     list.append(vehicle_to_search)
     return list
+
+def stack_images(scale, imgArray):
+    r"""
+    Stack the images based on the number of them by rows and columns.
+    Resize the images.
+    :param scale: scale factor
+    :param imgArray: array of images
+    :return: array of images to show
+    """
+
+    rows = len(imgArray)
+    cols = len(imgArray[0])
+
+    rowsAvailable = isinstance(imgArray[0], list)
+
+    width = imgArray[0][0].shape[1]
+    height = imgArray[0][0].shape[0]
+
+    if rowsAvailable:
+        for x in range(0, rows):
+            for y in range(0, cols):
+
+                if imgArray[x][y].shape[:2] == imgArray[0][0].shape[:2]:
+                    imgArray[x][y] = cv.resize(imgArray[x][y], (0, 0), None, scale, scale)
+                else:
+                    imgArray[x][y] = cv.resize(imgArray[x][y], (imgArray[0][0].shape[1], imgArray[0][0].shape[0]),
+                                               None, scale, scale)
+
+                if len(imgArray[x][y].shape) == 2:
+                    imgArray[x][y] = cv.cvtColor(imgArray[x][y], cv.COLOR_GRAY2BGR)
+
+        imageBlank = np.zeros((height, width, 3), np.uint8)
+        hor = [imageBlank] * rows
+
+        for x in range(0, rows):
+            hor[x] = np.hstack(imgArray[x])
+        ver = np.vstack(hor)
+
+    else:
+        for x in range(0, rows):
+
+            if imgArray[x].shape[:2] == imgArray[0].shape[:2]:
+                imgArray[x] = cv.resize(imgArray[x], (0, 0), None, scale, scale)
+            else:
+                imgArray[x] = cv.resize(imgArray[x], (imgArray[0].shape[1], imgArray[0].shape[0]), None, scale, scale)
+
+            if len(imgArray[x].shape) == 2:
+                imgArray[x] = cv.cvtColor(imgArray[x], cv.COLOR_GRAY2BGR)
+
+        hor = np.hstack(imgArray)
+        ver = hor
+
+    return ver
+
