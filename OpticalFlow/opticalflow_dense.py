@@ -4,6 +4,8 @@ import cv2 as cv
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 
+from Common import color as Color
+from Common import utility as Utility
 from Common.load_video import get_video
 from Common.table import Table
 from Common.utility import log
@@ -67,6 +69,12 @@ class OpticalFlowDense:
         mask_hsv = np.zeros_like(first_frame)  # Each row of mask: (hue  [ANGLE], saturation, value [VELOCITY])
         mask_hsv[..., 1] = 255
 
+        polygon = np.array([[1, 397], [86, 386], [198, 369], [320, 356], [362, 412],
+                            [297, 410], [221, 418], [142, 440], [111, 466], [118, 496]])
+
+        mask_poly = np.zeros_like(first_frame[:, :, 0])
+        mask_poly = cv.resize(mask_poly, (self.width, self.height))
+
         while self.camera.isOpened():
 
             ret, frame = self.camera.read()
@@ -82,8 +90,7 @@ class OpticalFlowDense:
 
                 # Optical Flow Dense
                 flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
-                                                   iterations=5,
-                                                   poly_n=5, poly_sigma=1.1, flags=0)
+                                                   iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
                 # Magnitude and angle
                 magnitude, angle = cv.cartToPolar(flow[..., 0], flow[..., 1])
@@ -98,9 +105,8 @@ class OpticalFlowDense:
                 mask = np.zeros_like(frame)
                 mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
-                cv.putText(frame, str(self.iterations), (33, 26), cv.FONT_HERSHEY_PLAIN,
-                           2, (0, 0, 255), thickness=2)
-                self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps)
+                Utility.set_text(frame, str(self.iterations), (33, 26), color=Color.RED)
+                # self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps)
 
                 self.iterations += 1
 
