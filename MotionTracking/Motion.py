@@ -2,9 +2,9 @@ import cv2 as cv
 
 import Common.color as Color
 import Common.utility as Utility
+from Common.table import COLUMN_VELOCITY
 from Common.utility import log
 from MotionTracking.Vehicle import Vehicle
-from Common.table import COLUMN_VELOCITY, COLUMN_DIRECTION, COLUMN_STATIONARY
 
 
 def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5), iter_dilate=4, VALUE_AREA=150):
@@ -50,8 +50,8 @@ def morphological_operations(mask):
 
     # Morphological operations
     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
-    mask_erode = cv.erode(mask_bin, kernel, iterations=8)
-    mask_dilate = cv.dilate(mask_erode, kernel, iterations=4)
+    mask_erode = cv.erode(mask_bin, kernel, iterations=12)
+    mask_dilate = cv.dilate(mask_erode, kernel, iterations=1)
 
     # Find contours
     contours, _ = cv.findContours(mask_dilate, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
@@ -84,28 +84,32 @@ def get_distance(new_coordinates, list, max_distance, _log, default_distance=150
     """
 
     new_centroid = Utility.get_centroid(new_coordinates)
+    dist_already_calculated = []
 
     min_distance = default_distance
     result = None
 
     print(f"Search to find minimum distance {_log}")
     for box in list:
-        print(f"{box.name}:  {box.coordinates}, new_coordinates: {new_coordinates}")
-        _centroid = box.centroid
-        distance = Utility.get_length(new_centroid, _centroid)
 
-        print(f"Min distance [{min_distance}], distance: [{distance}]\n")
-        if max_distance > distance >= 0:
+        if not box.name in dist_already_calculated:
+            print(f"{box.name}:  {box.coordinates}, new_coordinates: {new_coordinates}")
+            dist_already_calculated.append(box.name)
+            _centroid = box.centroid
+            distance = Utility.get_length(new_centroid, _centroid)
 
-            if min_distance == default_distance or distance < min_distance:
-                # Updates variables
-                min_distance = distance  # Minimum distance between vehicles
-                result = box  # Vehicle to be returned
+            print(f"Min distance [{min_distance}], distance: [{distance}]\n")
+            if max_distance > distance >= 0:
 
-                log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
+                if min_distance == default_distance or distance < min_distance:
+                    # Updates variables
+                    min_distance = distance  # Minimum distance between vehicles
+                    result = box  # Vehicle to be returned
 
-                if min_distance == 0:
-                    break
+                    log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
+
+                    if min_distance == 0:
+                        break
 
     name = None
     if result is not None:
@@ -177,7 +181,7 @@ class Motion:
                     coordinates = Utility.get_coordinates_bb(points=((x, y), (x + w, y + h)))
 
                     v = Vehicle(name, coordinates)
-                    log(0, f"Added the new {v.name}")
+                    log(0, f"Added the new {v.name} with {(x, y), (x + w, y + h)}")
                     self.current_vehicles.append(v)
 
                     self.counter_vehicle += 1
@@ -333,7 +337,7 @@ class Motion:
                 """
 
                 # Updates the coordinates of the vehicle to the scene
-                log(0, f"Update {vehicle.name} with min_distance {min_distance}")
+                log(0, f"Update {vehicle.name} with min_distance {min_distance} with {new_coordinates}")
 
                 vehicle.set_coordinates(Utility.get_coordinates_bb(points=new_coordinates))
                 velocity = (Utility.get_velocity(distance=min_distance, fps=self.fps))
@@ -358,14 +362,14 @@ class Motion:
 
         :param new_coordinates:  coordinates of the next bounding box (vehicle).
 
-        :return vehicle: vehicle to be drawed.
+        :return vehicle: vehicle to be drawn.
         """
         ret, vehicle = self.check_repaint_vehicles(new_coordinates, "Repaint in add_vehicles ")
 
         if not ret:
             # New vehicle added to the scene
             name = f"Vehicle {self.counter_vehicle + 1}"
-            log(0, f"Added the new {name}")
+            log(0, f"Added the new {name} with coordinates {new_coordinates}")
 
             # Update vehicles list
             new_coordinates = Utility.get_coordinates_bb(points=new_coordinates)

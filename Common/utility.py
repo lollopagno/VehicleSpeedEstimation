@@ -65,7 +65,7 @@ def get_random_color():
     return tuple((int(color[0]), int(color[1]), int(color[2])))
 
 
-def get_area(contour, min_area=100):
+def get_area(contour, min_area=70):
     r"""
     Get the area of a specific contour.
 
