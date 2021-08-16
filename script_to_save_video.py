@@ -3,7 +3,7 @@ import pafy
 
 from Common import url as Url
 
-PATH = "video/cambridge3.avi"
+PATH = "video/cambridge5.avi"
 
 video_pafy = pafy.new(Url.CAMBRIDGE['Url'])
 play = video_pafy.getbest()

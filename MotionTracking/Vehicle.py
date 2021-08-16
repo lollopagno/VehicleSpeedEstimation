@@ -1,4 +1,5 @@
 from Common import utility as Utility
+from colorama import Fore
 
 num_frame_stationary = 3
 
@@ -18,6 +19,7 @@ class Vehicle:
 
         self.color = Utility.get_random_color()
         self.velocity = 0
+        self.direction = "Unknown"
 
         ### Field to manage stationary vehicles ###
         self.is_stationary = False
@@ -32,6 +34,7 @@ class Vehicle:
 
         :param new_coordinates: new corddinates.
         """
+        self.is_stationary = False
         self.coordinates = new_coordinates
         self.centroid = Utility.get_centroid(new_coordinates)
 
@@ -41,7 +44,7 @@ class Vehicle:
 
         :param new_value: new velocity.
         """
-        self.velocity = new_value
+        self.velocity = round(new_value, 3)
 
     def marked_as_stationary(self):
         """
@@ -82,3 +85,11 @@ class Vehicle:
         Resets (sets default value) the number of frame to remove vehicle into list.
         """
         self.num_frame_to_remove_vehicle = num_frame_stationary
+
+    def to_string(self):
+        """
+        Print vehicle information.
+        """
+
+        return (Fore.RED + f"[Name]: {self.name}\n[Is stationary]: {self.is_stationary}\n[Velocity]: {self.velocity}\n"
+                           f"[Color]: {self.color}\n[Coordinates]: {self.coordinates}")

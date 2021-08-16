@@ -98,9 +98,12 @@ class OpticalFlowDense:
                 mask = np.zeros_like(frame)
                 mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
+                cv.putText(frame, str(self.iterations), (33, 26), cv.FONT_HERSHEY_PLAIN,
+                           2, (0, 0, 255), thickness=2)
                 self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps)
 
                 self.iterations += 1
+
                 # dense_flow = cv.addWeighted(frame, 1, mask_rgb, 2, 0)
 
                 # cv.imshow("Dense Optical Flow", dense_flow)

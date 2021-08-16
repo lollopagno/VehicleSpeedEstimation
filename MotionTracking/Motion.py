@@ -4,6 +4,7 @@ import Common.color as Color
 import Common.utility as Utility
 from Common.utility import log
 from MotionTracking.Vehicle import Vehicle
+from Common.table import COLUMN_VELOCITY, COLUMN_DIRECTION, COLUMN_STATIONARY
 
 
 def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5), iter_dilate=4, VALUE_AREA=150):
@@ -49,7 +50,7 @@ def morphological_operations(mask):
 
     # Morphological operations
     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
-    mask_erode = cv.erode(mask_bin, kernel, iterations=15)
+    mask_erode = cv.erode(mask_bin, kernel, iterations=8)
     mask_dilate = cv.dilate(mask_erode, kernel, iterations=4)
 
     # Find contours
@@ -69,7 +70,7 @@ def morphological_operations(mask):
     return contours
 
 
-def get_distance(new_coordinates, list, max_distance, default_distance=20):
+def get_distance(new_coordinates, list, max_distance, _log, default_distance=150):
     """
     Calculates the distance among all vehicles detected.
 
@@ -87,22 +88,29 @@ def get_distance(new_coordinates, list, max_distance, default_distance=20):
     min_distance = default_distance
     result = None
 
+    print(f"Search to find minimum distance {_log}")
     for box in list:
+        print(f"{box.name}:  {box.coordinates}, new_coordinates: {new_coordinates}")
         _centroid = box.centroid
         distance = Utility.get_length(new_centroid, _centroid)
 
+        print(f"Min distance [{min_distance}], distance: [{distance}]\n")
         if max_distance > distance >= 0:
 
-            if min_distance == default_distance or distance <= min_distance:
+            if min_distance == default_distance or distance < min_distance:
                 # Updates variables
                 min_distance = distance  # Minimum distance between vehicles
                 result = box  # Vehicle to be returned
 
+                log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
+
                 if min_distance == 0:
                     break
 
-                log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance}")
-
+    name = None
+    if result is not None:
+        name = result.name
+    print(f"Returned value with {min_distance} of {name}")
     return min_distance, result
 
 
@@ -128,6 +136,8 @@ class Motion:
         self.deleted_vehicles = []
         self.vehicles_stationary = {}
 
+        self.vehicles_to_draw = []
+
         # Maximum num frame before deleting the vehicle history
         self.num_frame_to_remove_vehicle_history = 10
 
@@ -143,8 +153,6 @@ class Motion:
         self.iteration = iter
         self.fps = fps
 
-        rows_to_add_to_table = []
-
         contours = morphological_operations(mask)
 
         if len(self.prev_vehicles) == 0:
@@ -158,7 +166,6 @@ class Motion:
                 (x, y, w, h) = cv.boundingRect(cnt)
 
                 if Utility.get_area(cnt):
-                    # log(0, f"Counter deleted [{area}]! (if motion)")
                     continue
 
                 # Checks if the vehicle was already tracked
@@ -167,17 +174,17 @@ class Motion:
                 if not ret:
                     # New vehicle added
                     name = f"Vehicle {self.counter_vehicle + 1}"
-                    coordinates = Utility.get_coordinates_bb(point_1=(x, y), point_4=(x + w, y + h))
+                    coordinates = Utility.get_coordinates_bb(points=((x, y), (x + w, y + h)))
 
                     v = Vehicle(name, coordinates)
                     log(0, f"Added the new {v.name}")
-
                     self.current_vehicles.append(v)
+
                     self.counter_vehicle += 1
 
                 # Updates list to draw vehicles and update table
                 Utility.draw_vehicles([v], img)
-                rows_to_add_to_table.append(v)
+                self.table.add_rows([v])
 
         else:
             log(0, "YES vehicles (else)")
@@ -185,23 +192,33 @@ class Motion:
             Adds new vehicles previous frame.
             """
 
-            vehicles_to_draw = []
+            self.vehicles_to_draw.clear()
+            rows_to_add_to_table = []
+            tmp_new_coordinates = []
 
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
 
                 if Utility.get_area(cnt):
-                    # log(0, f"Counter deleted! [{area}] (else motion)")
                     continue
 
-                rows_to_add_to_table, draw = self.add_new_vehicles(new_coordinates=((x, y), (x + w, y + h)),
-                                                                   img=img)
+                vehicle = self.tracking(new_coordinates=((x, y), (x + w, y + h)), img=img)
 
-                if draw is not None:
+                if vehicle is None:
+                    tmp_new_coordinates.append([(x, y), (x + w, y + h)])
+                else:
                     # Checks if the vehicle was already tracked to update the new coordinates
-                    vehicles_to_draw = Utility.check_vehicle_in_list(vehicles_to_draw, draw)
+                    self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
 
-            Utility.draw_vehicles(vehicles_to_draw, img)
+            for coordinates in tmp_new_coordinates:
+                vehicle = self.add_new_vehicles(coordinates)
+                rows_to_add_to_table.append(vehicle)
+
+                # Checks if the vehicle was already tracked to update the new coordinates
+                self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
+
+            Utility.draw_vehicles(self.vehicles_to_draw, img)
+            self.table.add_rows(rows_to_add_to_table)
 
             for vehicle in self.prev_vehicles:
                 # Deletes vehicles to no longer track
@@ -218,9 +235,17 @@ class Motion:
                     pass
 
         # Updates lists
+        print(f"iter {self.iteration}")
+        print("prev_vehicles")
+        for i in self.prev_vehicles:
+            print(i.to_string() + "\n")
+
+        print("current vehicles")
+        for i in self.current_vehicles:
+            print(i.to_string() + "\n")
+
         self.prev_vehicles = self.current_vehicles.copy()
         self.current_vehicles.clear()
-        self.table.add_rows(rows_to_add_to_table)
 
         # Deletes vehicles history after N iterations
         tmp_list = []
@@ -233,22 +258,21 @@ class Motion:
         # Updates vehicles history list
         self.deleted_vehicles = tmp_list.copy()
 
-    def add_new_vehicles(self, new_coordinates, img, max_distance=30):
+    def tracking(self, new_coordinates, img, max_distance=30):
         """
-        Adds new vehicles based on the minimum distance between all bounding boxes.
+        Tracking vehicles based on the minimum distance between all bounding boxes.
 
         :param new_coordinates: coordinates of the next bounding box (vehicle).
         :param img: img to draw in.
         :param max_distance: maximum distance in pixel allowed.
 
-        :return rows_to_add: vehicles to add to the table.
         :return vehicle: if different from None, return vehicle object
         """
 
-        rows_to_add = []
         min_distance, vehicle = get_distance(new_coordinates,
                                              self.prev_vehicles,
-                                             max_distance=max_distance)
+                                             max_distance=max_distance,
+                                             _log="add new_vehicles")
 
         if vehicle is not None:
 
@@ -311,52 +335,53 @@ class Motion:
                 # Updates the coordinates of the vehicle to the scene
                 log(0, f"Update {vehicle.name} with min_distance {min_distance}")
 
-                point_1, point_4 = new_coordinates
-                vehicle.set_coordinates(Utility.get_coordinates_bb(point_1=point_1, point_4=point_4))
+                vehicle.set_coordinates(Utility.get_coordinates_bb(points=new_coordinates))
                 velocity = (Utility.get_velocity(distance=min_distance, fps=self.fps))
 
-                self.table.update_velocity(vehicle.name, velocity)
                 vehicle.set_velocity(velocity)
+                self.table.update_table(vehicle.name, COLUMN_VELOCITY, f"{vehicle.velocity} km/h")
 
                 self.current_vehicles.append(vehicle)
                 self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
-                rows_to_add.append(vehicle)
 
                 try:
                     # Remove the vehicle if it was previously stationary
                     del self.vehicles_stationary[vehicle.name]
                 except KeyError:
                     pass
+
+        return vehicle
+
+    def add_new_vehicles(self, new_coordinates):
+        """
+        Adds new vehicles when not present at the previous frame.
+
+        :param new_coordinates:  coordinates of the next bounding box (vehicle).
+
+        :return vehicle: vehicle to be drawed.
+        """
+        ret, vehicle = self.check_repaint_vehicles(new_coordinates, "Repaint in add_vehicles ")
+
+        if not ret:
+            # New vehicle added to the scene
+            name = f"Vehicle {self.counter_vehicle + 1}"
+            log(0, f"Added the new {name}")
+
+            # Update vehicles list
+            new_coordinates = Utility.get_coordinates_bb(points=new_coordinates)
+            vehicle = Vehicle(name, new_coordinates)
+
+            self.current_vehicles.append(vehicle)
+            self.counter_vehicle += 1
+
         else:
-            """
-            Adds new vehicles when not present at the previous frame.
-            """
-            ret, result = self.check_repaint_vehicles(new_coordinates, "Repaint in add_vehicles ")
+            vehicle.set_iteration(self.prev_vehicles)
+            self.deleted_vehicles.append(vehicle)
 
-            if not ret:
-                # New vehicle added to the scene
-                name = f"Vehicle {self.counter_vehicle + 1}"
-                log(0, f"Added the new {name}")
-
-                # Update vehicles list
-                point_1, point_4 = new_coordinates
-                new_coordinates = Utility.get_coordinates_bb(point_1=point_1, point_4=point_4)
-                v = Vehicle(name, new_coordinates)
-                self.current_vehicles.append(v)
-
-                rows_to_add.append(v)
-                self.counter_vehicle += 1
-
-            else:
-                result.set_iteration(self.prev_vehicles)
-                self.deleted_vehicles.append(result)
-
-            vehicle = result
-
-        return rows_to_add, vehicle
+        return vehicle
 
     def check_repaint_vehicles(self, coordinates, _log):
-        """"
+        """
         Check if there are vehicles to be redesigned.
 
         :param coordinates: coordinates of the last position of the vehicle.
@@ -364,11 +389,29 @@ class Motion:
         :return True if the vehicle need to be redesigned, false otherwise.
         """
         max_distance = 100
-        min_distance, result = get_distance(coordinates, self.deleted_vehicles, max_distance=max_distance)
+        min_distance, result = get_distance(coordinates, self.deleted_vehicles, max_distance=max_distance,
+                                            _log="Repaint")
 
         if min_distance < max_distance and result is not None:
-            log(3, f"{_log} {result.name}")
-            self.current_vehicles.append(result)
-            return True, result
+
+            # Check if the vehicle is already to be drawn
+            flag = False
+            for vehicle_to_draw in self.vehicles_to_draw:
+                if result.name == vehicle_to_draw.name:
+                    flag = True
+                    break
+
+            if not flag:
+                log(3, f"{_log} {result.name}")
+
+                # Update coordinates
+                coordinates = Utility.get_coordinates_bb(points=coordinates)
+                result.set_coordinates(coordinates)
+
+                # Update lists
+                self.current_vehicles.append(result)
+                Utility.delete_item_in_list(self.prev_vehicles, result.name)
+
+                return True, result
 
         return False, None

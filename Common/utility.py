@@ -18,6 +18,7 @@ def log(info, msg):
     - 0: information.
     - 1: Errors.
     - 2: Actions table.
+    - 3: Drawing.
     """
     if info == 0:
         print(Fore.YELLOW + f"[INFO] {msg}")
@@ -26,7 +27,7 @@ def log(info, msg):
     elif info == 2:
         print(Fore.BLUE + f"[TABLE] {msg}")
     elif info == 3:
-        print(Fore.GREEN + f"[PAINTING] {msg}")
+        print(Fore.GREEN + f"[DRAWING] {msg}")
 
     print(Style.RESET_ALL)
 
@@ -64,13 +65,12 @@ def get_random_color():
     return tuple((int(color[0]), int(color[1]), int(color[2])))
 
 
-def get_area(contour, min_area=50, max_area=200):
+def get_area(contour, min_area=100):
     r"""
     Get the area of a specific contour.
 
     :param contour: contour.
     :param min_area: minimum area value.
-    :param max_area: maximum area value.
 
     :return: True if the contour is to be discarded, false otherwise.
     """
@@ -78,8 +78,7 @@ def get_area(contour, min_area=50, max_area=200):
     area = cv.contourArea(contour)
     peri = cv.arcLength(contour, True)
     approx = cv.approxPolyDP(contour, 0.04 * peri, True)
-
-    return (min_area >= area > max_area) or len(approx) < 4
+    return min_area >= area or len(approx) < 4
 
 
 def draw_vehicles(vehicles, img):
@@ -113,12 +112,11 @@ def draw_vehicles(vehicles, img):
         set_text(img, num[0], (x + 90, y - 12), color=color, thickness=thick + 1, dim=1.5)
 
 
-def get_coordinates_bb(point_1, point_4):
+def get_coordinates_bb(points):
     """
     Get all cordinates of the bouding box.
 
-    :param point_1: start point of the bouding box.
-    :param point_4: end point of the bouding box.
+    :param points: start point and end point of the bouding box.
 
     point_1: (x_start, y_start)
     point_2: (x_end, y_start)
@@ -128,13 +126,12 @@ def get_coordinates_bb(point_1, point_4):
     :return: array with four coordinates of the bouding box.
     """
 
-    x_start, y_start = point_1
-    x_end, y_end = point_4
+    (x_start, y_start), (x_end, y_end) = points
 
     point_2 = (x_end, y_start)
     point_3 = (x_start, y_end)
 
-    return [point_1, point_2, point_3, point_4]
+    return [(x_start, y_start), point_2, point_3, (x_end, y_end)]
 
 
 def get_centroid(coordinates):
@@ -192,15 +189,11 @@ def delete_item_in_list(list, name):
 
     :return: list updated.
     """
-    length = len(list)
 
     for index, vehicle in enumerate(list):
         if vehicle.name == name:
             del list[index]
             break
-
-    if length == len(list):
-        raise Exception("No items has been deleted")
 
     return list
 
@@ -220,6 +213,7 @@ def check_vehicle_in_list(list, vehicle_to_search):
 
     list.append(vehicle_to_search)
     return list
+
 
 def stack_images(scale, imgArray):
     r"""
@@ -273,4 +267,3 @@ def stack_images(scale, imgArray):
         ver = hor
 
     return ver
-
