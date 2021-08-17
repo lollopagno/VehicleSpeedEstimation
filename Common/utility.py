@@ -3,6 +3,7 @@ import math
 import cv2 as cv
 import numpy as np
 from colorama import Style, Fore
+from Common.url import CITIES
 
 import Common.color as Color
 
@@ -79,6 +80,47 @@ def get_area(contour, min_area=70):
     peri = cv.arcLength(contour, True)
     approx = cv.approxPolyDP(contour, 0.04 * peri, True)
     return min_area >= area or len(approx) < 4
+
+
+def get_polygon(city):
+    """
+    Get polygon based on specific city.
+
+    :param city: city object.
+    """
+
+    polygon = []
+
+    for _city in CITIES:
+        if city["Name"] == _city:
+
+            for _polygon in city["Polygon"]:
+                polygon.append(_polygon)
+
+    return polygon
+
+
+def check_polygon(polygons, coordinates):
+    """
+    Check if the coordinates are inside the polygon.
+
+    :param polygons: polygons of the city.
+    :param coordinates: coordinates to check.
+
+    return: bool, True if the coordinates are out the polygon, false otherwise.
+    """
+    is_out = True
+
+    for polygon in polygons:
+        centroid = get_centroid(coordinates)
+        point = (int(centroid[0]), int(centroid[1]))
+        is_inside = cv.pointPolygonTest(polygon, point, False)
+
+        if is_inside >= 0:
+            is_out = False
+            break
+
+    return is_out
 
 
 def draw_vehicles(vehicles, img):

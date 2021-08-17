@@ -29,7 +29,17 @@ class OpticalFlowDense:
     Class to detect moving vehicles by implementation of optical flow dense.
     """
 
-    def __init__(self, video_url, height_cam=512, width_cam=750, show_log=True):
+    def __init__(self, video_url, height_cam=512, width_cam=750, exclude_area=True, show_log=True):
+        """"
+        Constructor of class.
+
+        :param video_url: url to get video.
+        :param height_cam: height of camera.
+        :param width_cam: width of camera.
+        :param exclude_area: bool, if true it doesn't consider the polygon.
+        :param show_log: bool, of true show the log.
+        """
+
         # Camera
         self.height = height_cam
         self.width = width_cam
@@ -46,9 +56,16 @@ class OpticalFlowDense:
         x, y = video_url["Frame rate"]
         self.frame_rate = FrameRate(x=x, y=y)
 
-        self.show_log = show_log
+        self.alpha = 0.5
+
+        # Flag
+        self.excluded_area = exclude_area
+        self.show_log = show_log  # TODO insert this in code!
         self.iterations = 0
-        self.city = video_url["Name"]
+
+        # City
+        self.obj_city = video_url
+        self.polygons = None
 
     def run(self):
 
@@ -57,7 +74,7 @@ class OpticalFlowDense:
 
         if self.show_log:
             log(0, "Optical Flow Dense start!")
-            log(0, f"City: {self.city}")
+            log(0, f"City: {self.obj_city['Name']}")
 
         self.table.show()
 
@@ -69,22 +86,28 @@ class OpticalFlowDense:
         mask_hsv = np.zeros_like(first_frame)  # Each row of mask: (hue  [ANGLE], saturation, value [VELOCITY])
         mask_hsv[..., 1] = 255
 
-        polygon = np.array([[1, 397], [86, 386], [198, 369], [320, 356], [362, 412],
-                            [297, 410], [221, 418], [142, 440], [111, 466], [118, 496]])
+        if not self.excluded_area:
+            self.polygons = Utility.get_polygon(self.obj_city)
+            mask_poly = np.zeros_like(first_frame[:, :, 0])
 
-        mask_poly = np.zeros_like(first_frame[:, :, 0])
-        mask_poly = cv.resize(mask_poly, (self.width, self.height))
+            for polygon in self.polygons:
+                cv.fillConvexPoly(mask_poly, polygon, 1)
 
         while self.camera.isOpened():
 
             ret, frame = self.camera.read()
 
             if ret:
-                log(0, f"Iteration: {self.iterations}")
+                if self.show_log:
+                    log(0, f"Iteration: {self.iterations}")
 
                 frame = cv.medianBlur(frame, ksize=5)
                 frame = cv.resize(frame, (self.width, self.height))
+                frame_copy = frame.copy()
                 gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+
+                if not self.excluded_area:
+                    frame = cv.bitwise_and(frame, frame, mask=mask_poly)
 
                 self.frame_rate.run(frame)
 
@@ -106,17 +129,17 @@ class OpticalFlowDense:
                 mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
                 Utility.set_text(frame, str(self.iterations), (33, 26), color=Color.RED)
-                # self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps)
+                self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps,
+                                           polygons=self.polygons)
 
-                self.iterations += 1
+                if not self.excluded_area:
+                    frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
 
-                # dense_flow = cv.addWeighted(frame, 1, mask_rgb, 2, 0)
-
-                # cv.imshow("Dense Optical Flow", dense_flow)
                 cv.imshow(WINDOW_OPTICAL_FLOW, frame)
 
                 # Update frame
                 prev_gray = gray
+                self.iterations += 1
 
                 if cv.waitKey(1) & 0xFF == ord('q'):
                     break

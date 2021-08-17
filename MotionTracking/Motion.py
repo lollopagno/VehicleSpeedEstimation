@@ -145,13 +145,14 @@ class Motion:
         # Maximum num frame before deleting the vehicle history
         self.num_frame_to_remove_vehicle_history = 10
 
-    def detect_vehicle(self, img, mask, iter, fps):
+    def detect_vehicle(self, img, mask, iter, fps, polygons):
         r"""
         Detect vehicle into img.
         :param img: img.
         :param mask: mask of img.
         :param iter: current iteration.
         :param fps: current frame per second.
+        :param polygons: polygons of the city.
         """
 
         self.iteration = iter
@@ -169,7 +170,7 @@ class Motion:
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
 
-                if Utility.get_area(cnt):
+                if Utility.get_area(cnt) or Utility.check_polygon(polygons, coordinates=((x, y), (x + w, y + h))):
                     continue
 
                 # Checks if the vehicle was already tracked
@@ -203,7 +204,7 @@ class Motion:
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
 
-                if Utility.get_area(cnt):
+                if Utility.get_area(cnt) or Utility.check_polygon(polygons, coordinates=((x, y), (x + w, y + h))):
                     continue
 
                 vehicle = self.tracking(new_coordinates=((x, y), (x + w, y + h)), img=img)
