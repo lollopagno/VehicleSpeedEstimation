@@ -100,7 +100,7 @@ def get_polygon(city):
     return polygon
 
 
-def check_polygon(polygons, coordinates):
+def check_polygon(img, polygons, coordinates):
     """
     Check if the coordinates are inside the polygon.
 
@@ -111,14 +111,23 @@ def check_polygon(polygons, coordinates):
     """
     is_out = True
 
-    for polygon in polygons:
+    if len(polygons) > 0:
         centroid = get_centroid(coordinates)
         point = (int(centroid[0]), int(centroid[1]))
+
+    for polygon in polygons:
         is_inside = cv.pointPolygonTest(polygon, point, False)
 
         if is_inside >= 0:
             is_out = False
             break
+
+    if is_out:
+        # Todo: delete in the future
+        try:
+            cv.circle(img, point, 35, (0, 0, 255), thickness=10)
+        except:
+            pass
 
     return is_out
 

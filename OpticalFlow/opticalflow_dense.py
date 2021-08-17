@@ -108,6 +108,8 @@ class OpticalFlowDense:
 
                 if not self.excluded_area:
                     frame = cv.bitwise_and(frame, frame, mask=mask_poly)
+                    #for polygon in self.polygons:
+                    #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
 
                 self.frame_rate.run(frame)
 
@@ -116,7 +118,7 @@ class OpticalFlowDense:
                                                    iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
                 # Magnitude and angle
-                magnitude, angle = cv.cartToPolar(flow[..., 0], flow[..., 1])
+                magnitude, angle = cv.cartToPolar(flow[:, :, 0], flow[:, :, 1])
 
                 # Set image hue according to the optical flow direction
                 mask_hsv[..., 0] = angle * 180 / np.pi / 2
@@ -130,7 +132,7 @@ class OpticalFlowDense:
 
                 Utility.set_text(frame, str(self.iterations), (33, 26), color=Color.RED)
                 self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps,
-                                           polygons=self.polygons)
+                                           excluded_area=self.excluded_area, polygons=self.polygons)
 
                 if not self.excluded_area:
                     frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)

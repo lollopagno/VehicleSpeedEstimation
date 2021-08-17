@@ -145,7 +145,7 @@ class Motion:
         # Maximum num frame before deleting the vehicle history
         self.num_frame_to_remove_vehicle_history = 10
 
-    def detect_vehicle(self, img, mask, iter, fps, polygons):
+    def detect_vehicle(self, img, mask, iter, fps, polygons, excluded_area):
         r"""
         Detect vehicle into img.
         :param img: img.
@@ -153,6 +153,7 @@ class Motion:
         :param iter: current iteration.
         :param fps: current frame per second.
         :param polygons: polygons of the city.
+        :param excluded_area: bool, if true it doesn't consider the polygon.
         """
 
         self.iteration = iter
@@ -170,8 +171,14 @@ class Motion:
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
 
-                if Utility.get_area(cnt) or Utility.check_polygon(polygons, coordinates=((x, y), (x + w, y + h))):
+                if Utility.get_area(cnt):
+                    # Discard small areas
                     continue
+
+                if not excluded_area:
+                    if Utility.check_polygon(img, polygons, coordinates=((x, y), (x + w, y + h))):
+                        # Check if the point is inside the polygon
+                        continue
 
                 # Checks if the vehicle was already tracked
                 ret, v = self.check_repaint_vehicles(((x, y), (x + w, y + h)), "Repaint without vehicles")
@@ -204,8 +211,14 @@ class Motion:
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
 
-                if Utility.get_area(cnt) or Utility.check_polygon(polygons, coordinates=((x, y), (x + w, y + h))):
+                if Utility.get_area(cnt):
+                    # Discard small areas
                     continue
+
+                if not excluded_area:
+                    if Utility.check_polygon(img, polygons, coordinates=((x, y), (x + w, y + h))):
+                        # Check if the point is inside the polygon
+                        continue
 
                 vehicle = self.tracking(new_coordinates=((x, y), (x + w, y + h)), img=img)
 
