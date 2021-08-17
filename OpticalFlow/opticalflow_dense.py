@@ -82,10 +82,6 @@ class OpticalFlowDense:
         first_frame = cv.resize(first_frame, (self.width, self.height))
         prev_gray = cv.cvtColor(first_frame, cv.COLOR_BGR2GRAY)
 
-        # Mask: [HSV Model] hue (direction of car), value (velocity), saturation (unused)
-        mask_hsv = np.zeros_like(first_frame)  # Each row of mask: (hue  [ANGLE], saturation, value [VELOCITY])
-        mask_hsv[..., 1] = 255
-
         if not self.excluded_area:
             self.polygons = Utility.get_polygon(self.obj_city)
             mask_poly = np.zeros_like(first_frame[:, :, 0])
@@ -108,7 +104,7 @@ class OpticalFlowDense:
 
                 if not self.excluded_area:
                     frame = cv.bitwise_and(frame, frame, mask=mask_poly)
-                    #for polygon in self.polygons:
+                    # for polygon in self.polygons:
                     #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
 
                 self.frame_rate.run(frame)
@@ -117,21 +113,8 @@ class OpticalFlowDense:
                 flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
                                                    iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
-                # Magnitude and angle
-                magnitude, angle = cv.cartToPolar(flow[:, :, 0], flow[:, :, 1])
-
-                # Set image hue according to the optical flow direction
-                mask_hsv[..., 0] = angle * 180 / np.pi / 2
-
-                # Set image value according to the optical flow magnitude (normalized)
-                mask_hsv[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
-
-                mask_rgb = cv.cvtColor(mask_hsv, cv.COLOR_HSV2BGR)
-                mask = np.zeros_like(frame)
-                mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
-
                 Utility.set_text(frame, str(self.iterations), (33, 26), color=Color.RED)
-                self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps,
+                self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.frame_rate.fps,
                                            excluded_area=self.excluded_area, polygons=self.polygons)
 
                 if not self.excluded_area:
@@ -148,3 +131,6 @@ class OpticalFlowDense:
 
         cv.destroyAllWindows()
         sys.exit(self.app_qt.exec_())
+
+    def detect_direction(self, flow):
+        pass

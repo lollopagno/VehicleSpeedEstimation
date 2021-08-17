@@ -1,4 +1,5 @@
 import cv2 as cv
+import numpy as np
 
 import Common.color as Color
 import Common.utility as Utility
@@ -34,40 +35,6 @@ def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5),
             continue
 
         cv.rectangle(img, (x, y), (x + w, y + h), Color.RED, 2)
-
-
-def morphological_operations(mask):
-    """
-    Performs morphological operations on the mask.
-
-    :param mask: mask of img.
-
-    :return contours: contours detect by mask.
-    """
-
-    mask_gray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
-    _, mask_bin = cv.threshold(mask_gray, 20, 255, cv.THRESH_BINARY)
-
-    # Morphological operations
-    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
-    mask_erode = cv.erode(mask_bin, kernel, iterations=12)
-    mask_dilate = cv.dilate(mask_erode, kernel, iterations=1)
-
-    # Find contours
-    contours, _ = cv.findContours(mask_dilate, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-
-    # Mask binary
-    mask_binary = cv.resize(mask_dilate, (400, 400))
-    mask_binary = cv.cvtColor(mask_binary, cv.COLOR_GRAY2RGB)
-
-    Utility.set_text(mask_binary, str(len(contours)), (320, 380), color=Color.RED, thickness=3)
-
-    mask = cv.resize(mask, (400, 400))
-    stack = Utility.stack_images(1, ([mask_binary, mask]))
-    cv.imshow("Masks", stack)
-    cv.waitKey(1)
-
-    return contours
 
 
 def get_distance(new_coordinates, list, max_distance, _log, default_distance=150):
@@ -129,9 +96,20 @@ class Motion:
 
         :param table object table.
         """
+        # Number of the vehicles
         self.counter_vehicle = 0
+
+        # Iteration number
         self.iteration = 0
+
+        # Frame Rate
         self.fps = 0
+
+        # Mask: [HSV Model] hue (direction of car), value (velocity), saturation (unused)
+        # Each row of mask: (hue  [ANGLE], saturation, value [VELOCITY])
+        self.mask = None
+
+        # Table
         self.table = table
 
         # Vehicle list
@@ -145,11 +123,11 @@ class Motion:
         # Maximum num frame before deleting the vehicle history
         self.num_frame_to_remove_vehicle_history = 10
 
-    def detect_vehicle(self, img, mask, iter, fps, polygons, excluded_area):
+    def detect_vehicle(self, img, flow, iter, fps, polygons, excluded_area):
         r"""
         Detect vehicle into img.
         :param img: img.
-        :param mask: mask of img.
+        :param flow: optical flow.
         :param iter: current iteration.
         :param fps: current frame per second.
         :param polygons: polygons of the city.
@@ -159,7 +137,19 @@ class Motion:
         self.iteration = iter
         self.fps = fps
 
-        contours = morphological_operations(mask)
+        if self.mask is None:
+            self.mask = np.zeros_like(img)
+            self.mask[..., 1] = 255
+
+        magnitude, angle = cv.cartToPolar(flow[:, :, 0], flow[:, :, 1])
+        self.mask[..., 0] = angle * 180 / np.pi / 2
+        self.mask[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
+
+        mask_rgb = cv.cvtColor(self.mask, cv.COLOR_HSV2BGR)
+        mask = np.zeros_like(img)
+        self.mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
+
+        contours = self.morphological_operations()
 
         if len(self.prev_vehicles) == 0:
             log(0, "NO vehicles (if)")
@@ -275,6 +265,39 @@ class Motion:
 
         # Updates vehicles history list
         self.deleted_vehicles = tmp_list.copy()
+
+    def morphological_operations(self):
+        """
+        Performs morphological operations on the mask.
+
+        :param mask: mask of img.
+
+        :return contours: contours detect by mask.
+        """
+
+        mask_gray = cv.cvtColor(self.mask, cv.COLOR_BGR2GRAY)
+        _, mask_bin = cv.threshold(mask_gray, 20, 255, cv.THRESH_BINARY)
+
+        # Morphological operations
+        kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
+        mask_erode = cv.erode(mask_bin, kernel, iterations=12)
+        mask_dilate = cv.dilate(mask_erode, kernel, iterations=1)
+
+        # Find contours
+        contours, _ = cv.findContours(mask_dilate, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+
+        # Mask binary
+        mask_binary = cv.resize(mask_dilate, (400, 400))
+        mask_binary = cv.cvtColor(mask_binary, cv.COLOR_GRAY2RGB)
+
+        Utility.set_text(mask_binary, str(len(contours)), (320, 380), color=Color.RED, thickness=3)
+
+        mask = cv.resize(self.mask, (400, 400))
+        stack = Utility.stack_images(1, ([mask_binary, mask]))
+        cv.imshow("Masks", stack)
+        cv.waitKey(1)
+
+        return contours
 
     def tracking(self, new_coordinates, img, max_distance=30):
         """
