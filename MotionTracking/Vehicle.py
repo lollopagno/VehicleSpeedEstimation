@@ -9,7 +9,7 @@ class Vehicle:
     Vehicle class.
     """
 
-    def __init__(self, name, coordinates):
+    def __init__(self, name, coordinates, direction="Unknown"):
 
         self.name = name
 
@@ -19,7 +19,7 @@ class Vehicle:
 
         self.color = Utility.get_random_color()
         self.velocity = 0
-        self.direction = "Unknown"
+        self.direction = direction
 
         ### Field to manage stationary vehicles ###
         self.is_stationary = False
@@ -45,6 +45,14 @@ class Vehicle:
         :param new_value: new velocity.
         """
         self.velocity = round(new_value, 3)
+
+    def set_direction(self, new_direction):
+        """
+        Update the direction.
+
+        :param new_direction: new direction.
+        """
+        self.direction = new_direction
 
     def marked_as_stationary(self):
         """

@@ -1,4 +1,5 @@
 import math
+from scipy.stats import mode
 
 import cv2 as cv
 import numpy as np
@@ -6,6 +7,12 @@ from colorama import Style, Fore
 from Common.url import CITIES
 
 import Common.color as Color
+
+UP = "Moving up"
+DOWN = "Moving down"
+LEFT = "Moving to the left"
+RIGHT = "Moving to the right"
+STATIONARY = "Stationary"
 
 
 def log(info, msg):
@@ -318,3 +325,83 @@ def stack_images(scale, imgArray):
         ver = hor
 
     return ver
+
+
+def get_direction(coordinates, angle, magnitude, threshold=10.0):
+    """
+    Calculate the direction of the vehicles.
+
+    :param coordinates: coordinates (start point, end point) of the vehicle.
+    :param angle: angle.
+    :param magnitude: magnitude.
+    :param threshold: threshold to filter the direction.
+
+    :return direction of the vehicle.
+    """
+
+    (x_start, y_start), (x_end, y_end) = coordinates
+
+    # Get portion of image
+    angle = angle[y_start:y_end, x_start:x_end]
+    magnitude = magnitude[y_start:y_end, x_start:x_end]
+
+    # Convert angles from radians to degrees
+    angle = np.degrees(angle)
+    magnitude = np.degrees(magnitude)
+
+    move_sense = angle[magnitude > threshold]
+    move_mode = mode(move_sense)[0]
+
+    directions_map = np.zeros([10, 5])
+
+    if 10 < move_mode <= 100:
+        # Down
+        directions_map[-1, 0] = 1
+        directions_map[-1, 1:] = 0
+        directions_map = np.roll(directions_map, -1, axis=0)
+
+    elif 100 < move_mode <= 190:
+        # Right
+        directions_map[-1, 1] = 1
+        directions_map[-1, :1] = 0
+        directions_map[-1, 2:] = 0
+        directions_map = np.roll(directions_map, -1, axis=0)
+
+    elif 190 < move_mode <= 280:
+        # Up
+        directions_map[-1, 2] = 1
+        directions_map[-1, :2] = 0
+        directions_map[-1, 3:] = 0
+        directions_map = np.roll(directions_map, -1, axis=0)
+
+    elif 280 < move_mode or move_mode < 10:
+        # Left
+        directions_map[-1, 3] = 1
+        directions_map[-1, :3] = 0
+        directions_map[-1, 4:] = 0
+        directions_map = np.roll(directions_map, -1, axis=0)
+
+    else:
+        # Stationary
+        directions_map[-1, -1] = 1
+        directions_map[-1, :-1] = 0
+        directions_map = np.roll(directions_map, 1, axis=0)
+
+    loc = directions_map.mean(axis=0).argmax()
+
+    if loc == 0:
+        text = DOWN
+
+    elif loc == 1:
+        text = RIGHT
+
+    elif loc == 2:
+        text = UP
+
+    elif loc == 3:
+        text = LEFT
+
+    else:
+        text = STATIONARY
+
+    return text

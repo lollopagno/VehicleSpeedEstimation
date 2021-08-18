@@ -131,6 +131,3 @@ class OpticalFlowDense:
 
         cv.destroyAllWindows()
         sys.exit(self.app_qt.exec_())
-
-    def detect_direction(self, flow):
-        pass

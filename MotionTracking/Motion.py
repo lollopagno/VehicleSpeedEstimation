@@ -107,7 +107,9 @@ class Motion:
 
         # Mask: [HSV Model] hue (direction of car), value (velocity), saturation (unused)
         # Each row of mask: (hue  [ANGLE], saturation, value [VELOCITY])
-        self.mask = None
+        self.mask_hsv = None
+        self.angle = None
+        self.magnitude = None
 
         # Table
         self.table = table
@@ -137,17 +139,17 @@ class Motion:
         self.iteration = iter
         self.fps = fps
 
-        if self.mask is None:
-            self.mask = np.zeros_like(img)
-            self.mask[..., 1] = 255
+        if self.mask_hsv is None:
+            self.mask_hsv = np.zeros_like(img)
+            self.mask_hsv[..., 1] = 255
 
-        magnitude, angle = cv.cartToPolar(flow[:, :, 0], flow[:, :, 1])
-        self.mask[..., 0] = angle * 180 / np.pi / 2
-        self.mask[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
+        self.magnitude, self.angle = cv.cartToPolar(flow[:, :, 0], flow[:, :, 1])
+        self.mask_hsv[..., 0] = self.angle * 180 / np.pi / 2
+        self.mask_hsv[..., 2] = cv.normalize(self.magnitude, None, 0, 255, cv.NORM_MINMAX)
 
-        mask_rgb = cv.cvtColor(self.mask, cv.COLOR_HSV2BGR)
+        mask_rgb = cv.cvtColor(self.mask_hsv, cv.COLOR_HSV2BGR)
         mask = np.zeros_like(img)
-        self.mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
+        self.mask_hsv = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
         contours = self.morphological_operations()
 
@@ -178,7 +180,9 @@ class Motion:
                     name = f"Vehicle {self.counter_vehicle + 1}"
                     coordinates = Utility.get_coordinates_bb(points=((x, y), (x + w, y + h)))
 
-                    v = Vehicle(name, coordinates)
+                    direction = Utility.get_direction(((x, y), (x + w, y + h)), self.angle, self.magnitude)
+                    v = Vehicle(name, coordinates, direction)
+
                     log(0, f"Added the new {v.name} with {(x, y), (x + w, y + h)}")
                     self.current_vehicles.append(v)
 
@@ -270,12 +274,10 @@ class Motion:
         """
         Performs morphological operations on the mask.
 
-        :param mask: mask of img.
-
         :return contours: contours detect by mask.
         """
 
-        mask_gray = cv.cvtColor(self.mask, cv.COLOR_BGR2GRAY)
+        mask_gray = cv.cvtColor(self.mask_hsv, cv.COLOR_BGR2GRAY)
         _, mask_bin = cv.threshold(mask_gray, 20, 255, cv.THRESH_BINARY)
 
         # Morphological operations
@@ -292,7 +294,7 @@ class Motion:
 
         Utility.set_text(mask_binary, str(len(contours)), (320, 380), color=Color.RED, thickness=3)
 
-        mask = cv.resize(self.mask, (400, 400))
+        mask = cv.resize(self.mask_hsv, (400, 400))
         stack = Utility.stack_images(1, ([mask_binary, mask]))
         cv.imshow("Masks", stack)
         cv.waitKey(1)
@@ -347,12 +349,19 @@ class Motion:
                         elif num_stat == 0:
                             # Deletes vehicle in the list of stationary vehicles. No tracking.
                             stat_vehicle.unmarked_as_stationary()
+
+                            direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+                            stat_vehicle.set_direction(direction)
+
                             del tmp_vehicles_stationary[stat_vehicle.name]
                         break
 
                     if index + 1 == len(tmp_vehicles_stationary):
                         # Vehicle wasn't on vehicles_stationary list.
                         stat_vehicle.marked_as_stationary()
+
+                        direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+                        stat_vehicle.set_direction(direction)
 
                         self.current_vehicles.append(stat_vehicle)
                         self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
@@ -361,6 +370,9 @@ class Motion:
                     # The list of the stationary vehicles is empty.
                     log(0, f"Added new {vehicle.name} as stationary vehicle.")
                     vehicle.marked_as_stationary()
+
+                    direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+                    vehicle.set_direction(direction)
 
                     self.current_vehicles.append(vehicle)
                     self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
@@ -373,13 +385,19 @@ class Motion:
                 Adds new vehicles present to the previous frame.
                 """
 
-                # Updates the coordinates of the vehicle to the scene
                 log(0, f"Update {vehicle.name} with min_distance {min_distance} with {new_coordinates}")
 
+                # Update corrdinates
                 vehicle.set_coordinates(Utility.get_coordinates_bb(points=new_coordinates))
-                velocity = (Utility.get_velocity(distance=min_distance, fps=self.fps))
 
+                # Update velocity
+                velocity = (Utility.get_velocity(distance=min_distance, fps=self.fps))
                 vehicle.set_velocity(velocity)
+
+                # Update direction
+                direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+                vehicle.set_direction(direction)
+
                 self.table.update_table(vehicle.name, COLUMN_VELOCITY, f"{vehicle.velocity} km/h")
 
                 self.current_vehicles.append(vehicle)
@@ -409,8 +427,10 @@ class Motion:
             log(0, f"Added the new {name} with coordinates {new_coordinates}")
 
             # Update vehicles list
+            direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
             new_coordinates = Utility.get_coordinates_bb(points=new_coordinates)
-            vehicle = Vehicle(name, new_coordinates)
+
+            vehicle = Vehicle(name, new_coordinates, direction)
 
             self.current_vehicles.append(vehicle)
             self.counter_vehicle += 1
@@ -444,6 +464,9 @@ class Motion:
 
             if not flag:
                 log(3, f"{_log} {result.name}")
+
+                direction = Utility.get_direction(coordinates, self.angle, self.magnitude)
+                result.set_direction(direction)
 
                 # Update coordinates
                 coordinates = Utility.get_coordinates_bb(points=coordinates)
