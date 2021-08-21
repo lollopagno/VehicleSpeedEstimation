@@ -100,12 +100,16 @@ class OpticalFlowDense:
                 frame = cv.medianBlur(frame, ksize=5)
                 frame = cv.resize(frame, (self.width, self.height))
                 frame_copy = frame.copy()
+
                 gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
                 if not self.excluded_area:
                     frame = cv.bitwise_and(frame, frame, mask=mask_poly)
                     # for polygon in self.polygons:
                     #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
+
+                if not self.excluded_area:
+                    frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
 
                 self.frame_rate.run(frame)
 
@@ -116,9 +120,6 @@ class OpticalFlowDense:
                 Utility.set_text(frame, str(self.iterations), (33, 26), color=Color.RED)
                 self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.frame_rate.fps,
                                            excluded_area=self.excluded_area, polygons=self.polygons)
-
-                if not self.excluded_area:
-                    frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
 
                 cv.imshow(WINDOW_OPTICAL_FLOW, frame)
 
