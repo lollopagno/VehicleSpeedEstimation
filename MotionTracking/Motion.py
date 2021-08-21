@@ -3,7 +3,7 @@ import numpy as np
 
 import Common.color as Color
 import Common.utility as Utility
-from Common.table import COLUMN_VELOCITY
+from Common.table import COLUMN_VELOCITY, COLUMN_DIRECTION
 from Common.utility import log
 from MotionTracking.Vehicle import Vehicle
 
@@ -35,54 +35,6 @@ def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5),
             continue
 
         cv.rectangle(img, (x, y), (x + w, y + h), Color.RED, 2)
-
-
-def get_distance(new_coordinates, list, max_distance, _log, default_distance=150):
-    """
-    Calculates the distance among all vehicles detected.
-
-    :param new_coordinates: coordinates of the next bounding box (vehicle)
-    :param list: list of vehicles to loop.
-    :param max_distance: maximum allowable distance in the search for the vehicle.
-    :param default_distance: default value minimum distance.
-
-    :return min_distance: smaller distance located relative to new_coordinates.
-    :return result: information of the vehicle extracted on the basis of new_coordinates.
-    """
-
-    new_centroid = Utility.get_centroid(new_coordinates)
-    dist_already_calculated = []
-
-    min_distance = default_distance
-    result = None
-
-    print(f"Search to find minimum distance {_log}")
-    for box in list:
-
-        if not box.name in dist_already_calculated:
-            print(f"{box.name}:  {box.coordinates}, new_coordinates: {new_coordinates}")
-            dist_already_calculated.append(box.name)
-            _centroid = box.centroid
-            distance = Utility.get_length(new_centroid, _centroid)
-
-            print(f"Min distance [{min_distance}], distance: [{distance}]\n")
-            if max_distance > distance >= 0:
-
-                if min_distance == default_distance or distance < min_distance:
-                    # Updates variables
-                    min_distance = distance  # Minimum distance between vehicles
-                    result = box  # Vehicle to be returned
-
-                    log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
-
-                    if min_distance == 0:
-                        break
-
-    name = None
-    if result is not None:
-        name = result.name
-    print(f"Returned value with {min_distance} of {name}")
-    return min_distance, result
 
 
 class Motion:
@@ -124,6 +76,58 @@ class Motion:
 
         # Maximum num frame before deleting the vehicle history
         self.num_frame_to_remove_vehicle_history = 10
+
+    def get_distance(self, new_coordinates, list, max_distance, _log, default_distance=150):
+        """
+        Calculates the distance among all vehicles detected.
+
+        :param new_coordinates: coordinates of the next bounding box (vehicle)
+        :param list: list of vehicles to loop.
+        :param max_distance: maximum allowable distance in the search for the vehicle.
+        :param default_distance: default value minimum distance.
+
+        :return min_distance: smaller distance located relative to new_coordinates.
+        :return result: information of the vehicle extracted on the basis of new_coordinates.
+        """
+
+        new_centroid = Utility.get_centroid(new_coordinates)
+        dist_already_calculated = []
+
+        min_distance = default_distance
+        result = None
+
+        print(f"Search to find minimum distance {_log}")
+        for box in list:
+
+            if not box.name in dist_already_calculated:
+                print(f"{box.name}:  {box.coordinates}, new_coordinates: {new_coordinates}")
+                dist_already_calculated.append(box.name)
+
+                # TODO pezzo da aggiugnere quando la direzione funziona perfettamente.
+                # direction = Utility.get_direction(f"Vehicle [{box.name}] to find", new_coordinates, self.angle, self.magnitude)
+                # if direction == box.direction:
+
+                _centroid = box.centroid
+                distance = Utility.get_length(new_centroid, _centroid)
+
+                print(f"Min distance [{min_distance}], distance: [{distance}]\n")
+                if max_distance > distance >= 0:
+
+                    if min_distance == default_distance or distance < min_distance:
+                        # Updates variables
+                        min_distance = distance  # Minimum distance between vehicles
+                        result = box  # Vehicle to be returned
+
+                        log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
+
+                        if min_distance == 0:
+                            break
+
+        name = None
+        if result is not None:
+            name = result.name
+        print(f"Returned value with {min_distance} of {name}")
+        return min_distance, result
 
     def detect_vehicle(self, img, flow, iter, fps, polygons, excluded_area):
         r"""
@@ -180,7 +184,7 @@ class Motion:
                     name = f"Vehicle {self.counter_vehicle + 1}"
                     coordinates = Utility.get_coordinates_bb(points=((x, y), (x + w, y + h)))
 
-                    direction = Utility.get_direction(((x, y), (x + w, y + h)), self.angle, self.magnitude)
+                    direction = Utility.get_direction(name, ((x, y), (x + w, y + h)), self.angle, self.magnitude)
                     v = Vehicle(name, coordinates, direction)
 
                     log(0, f"Added the new {v.name} with {(x, y), (x + w, y + h)}")
@@ -312,10 +316,10 @@ class Motion:
         :return vehicle: if different from None, return vehicle object
         """
 
-        min_distance, vehicle = get_distance(new_coordinates,
-                                             self.prev_vehicles,
-                                             max_distance=max_distance,
-                                             _log="add new_vehicles")
+        min_distance, vehicle = self.get_distance(new_coordinates,
+                                                  self.prev_vehicles,
+                                                  max_distance=max_distance,
+                                                  _log="add new_vehicles")
 
         if vehicle is not None:
 
@@ -350,8 +354,10 @@ class Motion:
                             # Deletes vehicle in the list of stationary vehicles. No tracking.
                             stat_vehicle.unmarked_as_stationary()
 
-                            direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+                            direction = Utility.get_direction(stat_vehicle.name, new_coordinates, self.angle,
+                                                              self.magnitude)
                             stat_vehicle.set_direction(direction)
+                            self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, direction)
 
                             del tmp_vehicles_stationary[stat_vehicle.name]
                         break
@@ -360,8 +366,10 @@ class Motion:
                         # Vehicle wasn't on vehicles_stationary list.
                         stat_vehicle.marked_as_stationary()
 
-                        direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+                        direction = Utility.get_direction(stat_vehicle.name, new_coordinates, self.angle,
+                                                          self.magnitude)
                         stat_vehicle.set_direction(direction)
+                        self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, direction)
 
                         self.current_vehicles.append(stat_vehicle)
                         self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
@@ -371,8 +379,9 @@ class Motion:
                     log(0, f"Added new {vehicle.name} as stationary vehicle.")
                     vehicle.marked_as_stationary()
 
-                    direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+                    direction = Utility.get_direction(vehicle.name, new_coordinates, self.angle, self.magnitude)
                     vehicle.set_direction(direction)
+                    self.table.update_table(vehicle.name, COLUMN_DIRECTION, direction)
 
                     self.current_vehicles.append(vehicle)
                     self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
@@ -395,9 +404,10 @@ class Motion:
                 vehicle.set_velocity(velocity)
 
                 # Update direction
-                direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+                direction = Utility.get_direction(vehicle.name, new_coordinates, self.angle, self.magnitude)
                 vehicle.set_direction(direction)
 
+                self.table.update_table(vehicle.name, COLUMN_DIRECTION, direction)
                 self.table.update_table(vehicle.name, COLUMN_VELOCITY, f"{vehicle.velocity} km/h")
 
                 self.current_vehicles.append(vehicle)
@@ -427,7 +437,7 @@ class Motion:
             log(0, f"Added the new {name} with coordinates {new_coordinates}")
 
             # Update vehicles list
-            direction = Utility.get_direction(new_coordinates, self.angle, self.magnitude)
+            direction = Utility.get_direction(name, new_coordinates, self.angle, self.magnitude)
             new_coordinates = Utility.get_coordinates_bb(points=new_coordinates)
 
             vehicle = Vehicle(name, new_coordinates, direction)
@@ -450,8 +460,8 @@ class Motion:
         :return True if the vehicle need to be redesigned, false otherwise.
         """
         max_distance = 100
-        min_distance, result = get_distance(coordinates, self.deleted_vehicles, max_distance=max_distance,
-                                            _log="Repaint")
+        min_distance, result = self.get_distance(coordinates, self.deleted_vehicles, max_distance=max_distance,
+                                                 _log="Repaint")
 
         if min_distance < max_distance and result is not None:
 
@@ -465,8 +475,9 @@ class Motion:
             if not flag:
                 log(3, f"{_log} {result.name}")
 
-                direction = Utility.get_direction(coordinates, self.angle, self.magnitude)
+                direction = Utility.get_direction(result.name, coordinates, self.angle, self.magnitude)
                 result.set_direction(direction)
+                self.table.update_table(result.name, COLUMN_DIRECTION, direction)
 
                 # Update coordinates
                 coordinates = Utility.get_coordinates_bb(points=coordinates)

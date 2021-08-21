@@ -327,7 +327,7 @@ def stack_images(scale, imgArray):
     return ver
 
 
-def get_direction(coordinates, angle, magnitude, threshold=10.0):
+def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
     """
     Calculate the direction of the vehicles.
 
@@ -403,5 +403,7 @@ def get_direction(coordinates, angle, magnitude, threshold=10.0):
 
     else:
         text = STATIONARY
+
+    print(f"{v}, direction: [{move_mode}] - {text}", end ="\n\n")
 
     return text
