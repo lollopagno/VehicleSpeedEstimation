@@ -34,4 +34,6 @@ if __name__ == "__main__":
     """
     app = App(video_url=Url.CAMBRIDGE,
               type_op=DENSE)
-    app.run()
+
+    while True:
+        app.run()

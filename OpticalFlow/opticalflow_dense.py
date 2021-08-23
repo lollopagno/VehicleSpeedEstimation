@@ -67,8 +67,9 @@ class OpticalFlowDense:
         self.obj_city = video_url
         self.polygons = None
 
-    def run(self):
+        self.start_video = False
 
+    def run(self):
         cv.namedWindow(WINDOW_OPTICAL_FLOW)
         cv.setMouseCallback(WINDOW_OPTICAL_FLOW, callback_mouse)
 
@@ -82,6 +83,14 @@ class OpticalFlowDense:
         first_frame = cv.resize(first_frame, (self.width, self.height))
         prev_gray = cv.cvtColor(first_frame, cv.COLOR_BGR2GRAY)
 
+        stack = Utility.stack_images(1, ([first_frame, first_frame]))
+        cv.imshow(WINDOW_OPTICAL_FLOW, stack)
+
+        mask = cv.resize(np.zeros_like(first_frame), (400,400))
+        stack_mask = Utility.stack_images(1, ([mask, mask]))
+        cv.imshow("Masks", stack_mask)
+        key = cv.waitKey(0)
+
         if not self.excluded_area:
             self.polygons = Utility.get_polygon(self.obj_city)
             mask_poly = np.zeros_like(first_frame[:, :, 0])
@@ -89,46 +98,53 @@ class OpticalFlowDense:
             for polygon in self.polygons:
                 cv.fillConvexPoly(mask_poly, polygon, 1)
 
-        while self.camera.isOpened():
+        if key % 256 == 32:
+            self.start_video = True
 
-            ret, frame = self.camera.read()
+        if self.start_video:
 
-            if ret:
-                if self.show_log:
-                    log(0, f"Iteration: {self.iterations}")
+            while self.camera.isOpened():
 
-                frame = cv.medianBlur(frame, ksize=5)
-                frame = cv.resize(frame, (self.width, self.height))
-                frame_copy = frame.copy()
+                ret, frame = self.camera.read()
 
-                gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+                if ret:
+                    if self.show_log:
+                        log(0, f"Iteration: {self.iterations}")
 
-                if not self.excluded_area:
-                    frame = cv.bitwise_and(frame, frame, mask=mask_poly)
-                    # for polygon in self.polygons:
-                    #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
+                    frame = cv.medianBlur(frame, ksize=5)
+                    frame = cv.resize(frame, (self.width, self.height))
+                    frame_copy = frame.copy()
 
-                if not self.excluded_area:
-                    frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
+                    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
-                self.frame_rate.run(frame)
+                    if not self.excluded_area:
+                        frame = cv.bitwise_and(frame, frame, mask=mask_poly)
+                        # for polygon in self.polygons:
+                        #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
 
-                # Optical Flow Dense
-                flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
-                                                   iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
+                    if not self.excluded_area:
+                        frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
 
-                Utility.set_text(frame, str(self.iterations), (33, 26), color=Color.RED)
-                self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.frame_rate.fps,
-                                           excluded_area=self.excluded_area, polygons=self.polygons)
+                    self.frame_rate.run(frame)
 
-                cv.imshow(WINDOW_OPTICAL_FLOW, frame)
+                    # Optical Flow Dense
+                    flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
+                                                       iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
-                # Update frame
-                prev_gray = gray
-                self.iterations += 1
+                    Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45),  dim=1.5, color=Color.RED)
+                    self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.frame_rate.fps,
+                                               excluded_area=self.excluded_area, polygons=self.polygons)
 
-                if cv.waitKey(1) & 0xFF == ord('q'):
-                    break
+                    stack = Utility.stack_images(1, ([frame, frame_copy]))
+                    cv.imshow(WINDOW_OPTICAL_FLOW, stack)
 
-        cv.destroyAllWindows()
-        sys.exit(self.app_qt.exec_())
+                    key = cv.waitKey(1)
+                    if key & 0xFF == ord('q'):
+                        # Exit to the program
+                        self.table.close()
+                        cv.destroyAllWindows()
+                        sys.exit()
+
+                    # Update frame
+                    prev_gray = gray
+                    self.iterations += 1
