@@ -64,6 +64,17 @@ class Table(QWidget):
 
         self.show()
 
+    def close(self):
+        """
+        Close the window.
+        """
+        
+        try:
+            self.table.close()
+            self.destroy()
+        except:
+            pass
+
     def add_rows(self, rows):
         r"""
         Added rows in the table.
@@ -90,7 +101,7 @@ class Table(QWidget):
                 item_stat = QTableWidgetItem(str(item.is_stationary))
                 item_stat.setTextAlignment(Qt.AlignHCenter)
 
-                item_direction = QTableWidgetItem(item.direction)
+                item_direction = QTableWidgetItem(item.get_direction())
                 item_direction.setTextAlignment(Qt.AlignHCenter)
 
                 self.table.insertRow(current_row)

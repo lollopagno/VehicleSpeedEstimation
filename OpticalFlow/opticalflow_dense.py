@@ -67,8 +67,9 @@ class OpticalFlowDense:
         self.obj_city = video_url
         self.polygons = None
 
-    def run(self):
+        self.start_video = False
 
+    def run(self):
         cv.namedWindow(WINDOW_OPTICAL_FLOW)
         cv.setMouseCallback(WINDOW_OPTICAL_FLOW, callback_mouse)
 
@@ -82,9 +83,13 @@ class OpticalFlowDense:
         first_frame = cv.resize(first_frame, (self.width, self.height))
         prev_gray = cv.cvtColor(first_frame, cv.COLOR_BGR2GRAY)
 
-        # Mask: [HSV Model] hue (direction of car), value (velocity), saturation (unused)
-        mask_hsv = np.zeros_like(first_frame)  # Each row of mask: (hue  [ANGLE], saturation, value [VELOCITY])
-        mask_hsv[..., 1] = 255
+        stack = Utility.stack_images(1, ([first_frame, first_frame]))
+        cv.imshow(WINDOW_OPTICAL_FLOW, stack)
+
+        mask = cv.resize(np.zeros_like(first_frame), (400,400))
+        stack_mask = Utility.stack_images(1, ([mask, mask]))
+        cv.imshow("Masks", stack_mask)
+        key = cv.waitKey(0)
 
         if not self.excluded_area:
             self.polygons = Utility.get_polygon(self.obj_city)
@@ -93,58 +98,53 @@ class OpticalFlowDense:
             for polygon in self.polygons:
                 cv.fillConvexPoly(mask_poly, polygon, 1)
 
-        while self.camera.isOpened():
+        if key % 256 == 32:
+            self.start_video = True
 
-            ret, frame = self.camera.read()
+        if self.start_video:
 
-            if ret:
-                if self.show_log:
-                    log(0, f"Iteration: {self.iterations}")
+            while self.camera.isOpened():
 
-                frame = cv.medianBlur(frame, ksize=5)
-                frame = cv.resize(frame, (self.width, self.height))
-                frame_copy = frame.copy()
-                gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+                ret, frame = self.camera.read()
 
-                if not self.excluded_area:
-                    frame = cv.bitwise_and(frame, frame, mask=mask_poly)
-                    #for polygon in self.polygons:
-                    #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
+                if ret:
+                    if self.show_log:
+                        log(0, f"Iteration: {self.iterations}")
 
-                self.frame_rate.run(frame)
+                    frame = cv.medianBlur(frame, ksize=5)
+                    frame = cv.resize(frame, (self.width, self.height))
+                    frame_copy = frame.copy()
 
-                # Optical Flow Dense
-                flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
-                                                   iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
+                    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
-                # Magnitude and angle
-                magnitude, angle = cv.cartToPolar(flow[:, :, 0], flow[:, :, 1])
+                    if not self.excluded_area:
+                        frame = cv.bitwise_and(frame, frame, mask=mask_poly)
+                        # for polygon in self.polygons:
+                        #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
 
-                # Set image hue according to the optical flow direction
-                mask_hsv[..., 0] = angle * 180 / np.pi / 2
+                    if not self.excluded_area:
+                        frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
 
-                # Set image value according to the optical flow magnitude (normalized)
-                mask_hsv[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
+                    self.frame_rate.run(frame)
 
-                mask_rgb = cv.cvtColor(mask_hsv, cv.COLOR_HSV2BGR)
-                mask = np.zeros_like(frame)
-                mask = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
+                    # Optical Flow Dense
+                    flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
+                                                       iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
-                Utility.set_text(frame, str(self.iterations), (33, 26), color=Color.RED)
-                self.motion.detect_vehicle(img=frame, mask=mask, iter=self.iterations, fps=self.frame_rate.fps,
-                                           excluded_area=self.excluded_area, polygons=self.polygons)
+                    Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45),  dim=1.5, color=Color.RED)
+                    self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.frame_rate.fps,
+                                               excluded_area=self.excluded_area, polygons=self.polygons)
 
-                if not self.excluded_area:
-                    frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
+                    stack = Utility.stack_images(1, ([frame, frame_copy]))
+                    cv.imshow(WINDOW_OPTICAL_FLOW, stack)
 
-                cv.imshow(WINDOW_OPTICAL_FLOW, frame)
+                    key = cv.waitKey(1)
+                    if key & 0xFF == ord('q'):
+                        # Exit to the program
+                        self.table.close()
+                        cv.destroyAllWindows()
+                        sys.exit()
 
-                # Update frame
-                prev_gray = gray
-                self.iterations += 1
-
-                if cv.waitKey(1) & 0xFF == ord('q'):
-                    break
-
-        cv.destroyAllWindows()
-        sys.exit(self.app_qt.exec_())
+                    # Update frame
+                    prev_gray = gray
+                    self.iterations += 1
