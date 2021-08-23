@@ -1,7 +1,9 @@
 from Common import utility as Utility
 from colorama import Fore
+from Common.utility import UP, DOWN, LEFT, RIGHT
 
-num_frame_stationary = 3
+num_frame_stationary = 40
+UNKNOWN = "Unknown"
 
 
 class Vehicle:
@@ -9,7 +11,7 @@ class Vehicle:
     Vehicle class.
     """
 
-    def __init__(self, name, coordinates, direction="Unknown"):
+    def __init__(self, name, coordinates, direction=UNKNOWN):
 
         self.name = name
 
@@ -19,7 +21,7 @@ class Vehicle:
 
         self.color = Utility.get_random_color()
         self.velocity = 0
-        self.direction = direction
+        self.direction = [direction]
 
         ### Field to manage stationary vehicles ###
         self.is_stationary = False
@@ -52,7 +54,51 @@ class Vehicle:
 
         :param new_direction: new direction.
         """
-        self.direction = new_direction
+        self.direction.insert(0, new_direction)
+
+        if len(self.direction) > 10:
+            del self.direction[-1]
+
+    def get_direction(self):
+        """
+        Get direction of the vehicle.
+        """
+
+        count_up = 0
+        count_down = 0
+        count_left = 0
+        count_right = 0
+
+        for direction in self.direction:
+            if direction == UP:
+                count_up += 1
+
+            elif direction == DOWN:
+                count_down += 1
+
+            elif direction == LEFT:
+                count_left += 1
+
+            elif direction == RIGHT:
+                count_right += 1
+
+        max_direction = max(count_up, count_down, count_left, count_right)
+
+        text_direction = ""
+        if max_direction == count_up:
+            text_direction = UP
+
+        elif max_direction == count_down:
+            text_direction = DOWN
+
+        elif max_direction == count_right:
+            text_direction = RIGHT
+
+        elif max_direction == count_left:
+            text_direction = LEFT
+
+        print(f"Direction [{text_direction}] of vehicle [{self.name}] of list {self.direction}", end="\n\n")
+        return text_direction
 
     def marked_as_stationary(self):
         """

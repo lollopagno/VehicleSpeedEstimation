@@ -5,6 +5,7 @@ import Common.color as Color
 import Common.utility as Utility
 from Common.table import COLUMN_VELOCITY, COLUMN_DIRECTION
 from Common.utility import log
+from MotionTracking.Vehicle import UNKNOWN
 from MotionTracking.Vehicle import Vehicle
 
 
@@ -103,25 +104,26 @@ class Motion:
                 print(f"{box.name}:  {box.coordinates}, new_coordinates: {new_coordinates}")
                 dist_already_calculated.append(box.name)
 
-                # TODO pezzo da aggiugnere quando la direzione funziona perfettamente.
-                # direction = Utility.get_direction(f"Vehicle [{box.name}] to find", new_coordinates, self.angle, self.magnitude)
-                # if direction == box.direction:
-
                 _centroid = box.centroid
                 distance = Utility.get_length(new_centroid, _centroid)
 
                 print(f"Min distance [{min_distance}], distance: [{distance}]\n")
+
                 if max_distance > distance >= 0:
 
-                    if min_distance == default_distance or distance < min_distance:
-                        # Updates variables
-                        min_distance = distance  # Minimum distance between vehicles
-                        result = box  # Vehicle to be returned
+                    direction = Utility.get_direction(f"Vehicle [{box.name}] to find", new_coordinates, self.angle, self.magnitude)
 
-                        log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
+                    if (box.get_direction() == UNKNOWN or direction == box.get_direction()) or distance <= 50:
 
-                        if min_distance == 0:
-                            break
+                        if min_distance == default_distance or distance < min_distance:
+                            # Updates variables
+                            min_distance = distance  # Minimum distance between vehicles
+                            result = box  # Vehicle to be returned
+
+                            log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
+
+                            if min_distance == 0:
+                                break
 
         name = None
         if result is not None:
@@ -357,7 +359,7 @@ class Motion:
                             direction = Utility.get_direction(stat_vehicle.name, new_coordinates, self.angle,
                                                               self.magnitude)
                             stat_vehicle.set_direction(direction)
-                            self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, direction)
+                            self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, stat_vehicle.get_direction())
 
                             del tmp_vehicles_stationary[stat_vehicle.name]
                         break
@@ -369,7 +371,7 @@ class Motion:
                         direction = Utility.get_direction(stat_vehicle.name, new_coordinates, self.angle,
                                                           self.magnitude)
                         stat_vehicle.set_direction(direction)
-                        self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, direction)
+                        self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, stat_vehicle.get_direction())
 
                         self.current_vehicles.append(stat_vehicle)
                         self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
@@ -381,7 +383,7 @@ class Motion:
 
                     direction = Utility.get_direction(vehicle.name, new_coordinates, self.angle, self.magnitude)
                     vehicle.set_direction(direction)
-                    self.table.update_table(vehicle.name, COLUMN_DIRECTION, direction)
+                    self.table.update_table(vehicle.name, COLUMN_DIRECTION, vehicle.get_direction())
 
                     self.current_vehicles.append(vehicle)
                     self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
@@ -407,7 +409,7 @@ class Motion:
                 direction = Utility.get_direction(vehicle.name, new_coordinates, self.angle, self.magnitude)
                 vehicle.set_direction(direction)
 
-                self.table.update_table(vehicle.name, COLUMN_DIRECTION, direction)
+                self.table.update_table(vehicle.name, COLUMN_DIRECTION, vehicle.get_direction())
                 self.table.update_table(vehicle.name, COLUMN_VELOCITY, f"{vehicle.velocity} km/h")
 
                 self.current_vehicles.append(vehicle)
@@ -477,7 +479,7 @@ class Motion:
 
                 direction = Utility.get_direction(result.name, coordinates, self.angle, self.magnitude)
                 result.set_direction(direction)
-                self.table.update_table(result.name, COLUMN_DIRECTION, direction)
+                self.table.update_table(result.name, COLUMN_DIRECTION, result.get_direction())
 
                 # Update coordinates
                 coordinates = Utility.get_coordinates_bb(points=coordinates)
