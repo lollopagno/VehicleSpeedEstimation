@@ -89,6 +89,30 @@ def get_area(contour, min_area=70):
     return min_area >= area or len(approx) < 4
 
 
+def get_intensity(mask, coordinates):
+    """
+    Gets averege value among the intensity of the pixels.
+
+    :param mask: mask.
+    :param coordinates: coordinates of the area to calculate the average.
+    """
+    try:
+        p1, _, _, p4 = coordinates
+    except:
+        p1, p4 = coordinates
+
+    (x_start, y_start), (x_end, y_end) = p1, p4
+
+    try:
+        avg_color_per_row = np.average(mask[y_start:y_end, x_start:x_end], axis=0)
+        avg_color = np.average(avg_color_per_row, axis=0)
+        color_hsv = [round(avg_color[0], 3), round(avg_color[1], 3), round(avg_color[2], 3)]
+    except ZeroDivisionError:
+        color_hsv = [0, 0, 0]
+
+    return color_hsv
+
+
 def get_polygon(city):
     """
     Get polygon based on specific city.
@@ -354,27 +378,27 @@ def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
 
     directions_map = np.zeros([10, 5])
 
-    if 10 < move_mode <= 100:
+    if 340 < move_mode or move_mode <= 70:
         # Down
         directions_map[-1, 0] = 1
         directions_map[-1, 1:] = 0
         directions_map = np.roll(directions_map, -1, axis=0)
 
-    elif 100 < move_mode <= 190:
+    elif 70 < move_mode <= 160:
         # Right
         directions_map[-1, 1] = 1
         directions_map[-1, :1] = 0
         directions_map[-1, 2:] = 0
         directions_map = np.roll(directions_map, -1, axis=0)
 
-    elif 190 < move_mode <= 280:
+    elif 160 < move_mode <= 250:
         # Up
         directions_map[-1, 2] = 1
         directions_map[-1, :2] = 0
         directions_map[-1, 3:] = 0
         directions_map = np.roll(directions_map, -1, axis=0)
 
-    elif 280 < move_mode or move_mode < 10:
+    elif 250 < move_mode < 340:
         # Left
         directions_map[-1, 3] = 1
         directions_map[-1, :3] = 0
@@ -393,17 +417,15 @@ def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
         text = DOWN
 
     elif loc == 1:
-        text = RIGHT
+        text = LEFT
 
     elif loc == 2:
         text = UP
 
     elif loc == 3:
-        text = LEFT
+        text = RIGHT
 
     else:
         text = STATIONARY
-
-    print(f"{v}, direction: [{move_mode}] - {text}", end ="\n\n")
 
     return text

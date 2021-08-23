@@ -111,7 +111,8 @@ class Motion:
 
                 if max_distance > distance >= 0:
 
-                    direction = Utility.get_direction(f"Vehicle [{box.name}] to find", new_coordinates, self.angle, self.magnitude)
+                    direction = Utility.get_direction(f"Vehicle [{box.name}] to find", new_coordinates, self.angle,
+                                                      self.magnitude)
 
                     if (box.get_direction() == UNKNOWN or direction == box.get_direction()) or distance <= 50:
 
@@ -178,8 +179,14 @@ class Motion:
                         # Check if the point is inside the polygon
                         continue
 
+                vehicle = self.check_vehicle_by_colors(((x, y), (x + w, y + h)))
+                if vehicle is not None:
+                    coordinates = (vehicle.coordinates[0], vehicle.coordinates[3])
+                else:
+                    coordinates = ((x, y), (x + w, y + h))
+
                 # Checks if the vehicle was already tracked
-                ret, v = self.check_repaint_vehicles(((x, y), (x + w, y + h)), "Repaint without vehicles")
+                ret, v = self.check_repaint_vehicles(coordinates, "Repaint without vehicles")
 
                 if not ret:
                     # New vehicle added
@@ -187,7 +194,9 @@ class Motion:
                     coordinates = Utility.get_coordinates_bb(points=((x, y), (x + w, y + h)))
 
                     direction = Utility.get_direction(name, ((x, y), (x + w, y + h)), self.angle, self.magnitude)
-                    v = Vehicle(name, coordinates, direction)
+                    intensity = Utility.get_intensity(self.mask_hsv, coordinates)
+
+                    v = Vehicle(name, coordinates, intensity, direction)
 
                     log(0, f"Added the new {v.name} with {(x, y), (x + w, y + h)}")
                     self.current_vehicles.append(v)
@@ -220,7 +229,13 @@ class Motion:
                         # Check if the point is inside the polygon
                         continue
 
-                vehicle = self.tracking(new_coordinates=((x, y), (x + w, y + h)), img=img)
+                vehicle = self.check_vehicle_by_colors(((x, y), (x + w, y + h)))
+                if vehicle is not None:
+                    coordinates = (vehicle.coordinates[0], vehicle.coordinates[3])
+                else:
+                    coordinates = ((x, y), (x + w, y + h))
+
+                vehicle = self.tracking(new_coordinates=coordinates, img=img)
 
                 if vehicle is None:
                     tmp_new_coordinates.append([(x, y), (x + w, y + h)])
@@ -402,12 +417,16 @@ class Motion:
                 vehicle.set_coordinates(Utility.get_coordinates_bb(points=new_coordinates))
 
                 # Update velocity
-                velocity = (Utility.get_velocity(distance=min_distance, fps=self.fps))
+                velocity = Utility.get_velocity(distance=min_distance, fps=self.fps)
                 vehicle.set_velocity(velocity)
 
                 # Update direction
                 direction = Utility.get_direction(vehicle.name, new_coordinates, self.angle, self.magnitude)
                 vehicle.set_direction(direction)
+
+                # Update intensity
+                intensity = Utility.get_intensity(self.mask_hsv, vehicle.coordinates)
+                vehicle.set_intensity(intensity)
 
                 self.table.update_table(vehicle.name, COLUMN_DIRECTION, vehicle.get_direction())
                 self.table.update_table(vehicle.name, COLUMN_VELOCITY, f"{vehicle.velocity} km/h")
@@ -441,8 +460,9 @@ class Motion:
             # Update vehicles list
             direction = Utility.get_direction(name, new_coordinates, self.angle, self.magnitude)
             new_coordinates = Utility.get_coordinates_bb(points=new_coordinates)
+            intensity = Utility.get_intensity(self.mask_hsv, new_coordinates)
 
-            vehicle = Vehicle(name, new_coordinates, direction)
+            vehicle = Vehicle(name, new_coordinates, intensity, direction)
 
             self.current_vehicles.append(vehicle)
             self.counter_vehicle += 1
@@ -461,7 +481,7 @@ class Motion:
 
         :return True if the vehicle need to be redesigned, false otherwise.
         """
-        max_distance = 100
+        max_distance = 70
         min_distance, result = self.get_distance(coordinates, self.deleted_vehicles, max_distance=max_distance,
                                                  _log="Repaint")
 
@@ -485,6 +505,10 @@ class Motion:
                 coordinates = Utility.get_coordinates_bb(points=coordinates)
                 result.set_coordinates(coordinates)
 
+                # Update intensity
+                intensity = Utility.get_intensity(self.mask_hsv, coordinates)
+                result.set_intensity(intensity)
+
                 # Update lists
                 self.current_vehicles.append(result)
                 Utility.delete_item_in_list(self.prev_vehicles, result.name)
@@ -492,3 +516,50 @@ class Motion:
                 return True, result
 
         return False, None
+
+    def check_vehicle_by_colors(self, coordinates):
+        """
+        ....
+        """
+        intensity_to_compare = Utility.get_intensity(self.mask_hsv, coordinates)
+        h, s, v = intensity_to_compare
+
+        result = None
+        values_range = 15
+
+        for vehicle in self.current_vehicles:
+
+            intensity = Utility.get_intensity(self.mask_hsv, vehicle.coordinates)
+            print(f"Intensity Vehicle: {vehicle.name}, {vehicle.average_intesity} compare to {intensity_to_compare}")
+
+            if not h - values_range <= intensity[0] <= h + values_range:
+                continue
+
+            elif not s - values_range <= intensity[1] <= s + values_range:
+                continue
+
+            elif not v - values_range <= intensity[2] <= v + values_range:
+                continue
+
+            # TODO fix this! Le bb non vengono considerate intereamente!
+            print("Increase bb for intensity")
+            (x_start, y_start), _, _, _ = vehicle.coordinates
+            _, (x_end, y_end) = coordinates
+
+            bb_1 = Utility.get_coordinates_bb(((x_start, y_start), (x_end, y_end)))
+            cnt_1 = [np.array([bb_1], dtype=np.int32)]
+
+            bb_2 = Utility.get_coordinates_bb(((x_end, y_end), (x_start, y_start)))
+            cnt_2 = [np.array([bb_2], dtype=np.int32)]
+
+            if cv.contourArea(cnt_1) >= cv.contourArea(cnt_2):
+                vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start, y_start), (x_end, y_end))))
+            else:
+                (x_start, y_start), _ = coordinates
+                _, _, _, (x_end, y_end) = vehicle.coordinates
+                vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_end, y_end), (x_start, y_start))))
+
+            result = vehicle
+            break
+
+        return result

@@ -2,7 +2,7 @@ from Common import utility as Utility
 from colorama import Fore
 from Common.utility import UP, DOWN, LEFT, RIGHT
 
-num_frame_stationary = 40
+num_frame_stationary = 10  # TODO changed it!
 UNKNOWN = "Unknown"
 
 
@@ -11,7 +11,7 @@ class Vehicle:
     Vehicle class.
     """
 
-    def __init__(self, name, coordinates, direction=UNKNOWN):
+    def __init__(self, name, coordinates, av_intensity, direction=UNKNOWN):
 
         self.name = name
 
@@ -22,6 +22,7 @@ class Vehicle:
         self.color = Utility.get_random_color()
         self.velocity = 0
         self.direction = [direction]
+        self.average_intesity = av_intensity
 
         ### Field to manage stationary vehicles ###
         self.is_stationary = False
@@ -97,8 +98,10 @@ class Vehicle:
         elif max_direction == count_left:
             text_direction = LEFT
 
-        print(f"Direction [{text_direction}] of vehicle [{self.name}] of list {self.direction}", end="\n\n")
         return text_direction
+
+    def set_intensity(self, intensity):
+        self.average_intesity = intensity
 
     def marked_as_stationary(self):
         """
@@ -146,4 +149,5 @@ class Vehicle:
         """
 
         return (Fore.RED + f"[Name]: {self.name}\n[Is stationary]: {self.is_stationary}\n[Velocity]: {self.velocity}\n"
-                           f"[Color]: {self.color}\n[Coordinates]: {self.coordinates}")
+                           f"[Direction]: {self.direction}\n[Color]: {self.color}\n[Coordinates]: {self.coordinates}\n"
+                           f"[Intensity HSV]: {self.average_intesity}")
