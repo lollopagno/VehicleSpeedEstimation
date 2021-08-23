@@ -16,7 +16,9 @@ class App:
 
         self.op_dense = OpticalFlowDense(video_url=video_url,
                                          height_cam=height_cam,
-                                         width_cam=width_cam)
+                                         width_cam=width_cam,
+                                         exclude_area=False,
+                                         show_log=True)
 
     def run(self):
         if self.type_op == SPARSE:
@@ -30,6 +32,8 @@ if __name__ == "__main__":
     r"""
     Main
     """
-    app = App(video_url=Url.TAIPEI,
+    app = App(video_url=Url.CAMBRIDGE,
               type_op=DENSE)
-    app.run()
+
+    while True:
+        app.run()

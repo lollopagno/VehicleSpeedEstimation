@@ -1,10 +1,18 @@
 import math
+from scipy.stats import mode
 
 import cv2 as cv
 import numpy as np
 from colorama import Style, Fore
+from Common.url import CITIES
 
 import Common.color as Color
+
+UP = "Moving up"
+DOWN = "Moving down"
+LEFT = "Moving to the left"
+RIGHT = "Moving to the right"
+STATIONARY = "Stationary"
 
 
 def log(info, msg):
@@ -18,6 +26,7 @@ def log(info, msg):
     - 0: information.
     - 1: Errors.
     - 2: Actions table.
+    - 3: Drawing.
     """
     if info == 0:
         print(Fore.YELLOW + f"[INFO] {msg}")
@@ -26,7 +35,7 @@ def log(info, msg):
     elif info == 2:
         print(Fore.BLUE + f"[TABLE] {msg}")
     elif info == 3:
-        print(Fore.GREEN + f"[PAINTING] {msg}")
+        print(Fore.GREEN + f"[DRAWING] {msg}")
 
     print(Style.RESET_ALL)
 
@@ -64,13 +73,12 @@ def get_random_color():
     return tuple((int(color[0]), int(color[1]), int(color[2])))
 
 
-def get_area(contour, min_area=50, max_area=200):
+def get_area(contour, min_area=70):
     r"""
     Get the area of a specific contour.
 
     :param contour: contour.
     :param min_area: minimum area value.
-    :param max_area: maximum area value.
 
     :return: True if the contour is to be discarded, false otherwise.
     """
@@ -78,8 +86,57 @@ def get_area(contour, min_area=50, max_area=200):
     area = cv.contourArea(contour)
     peri = cv.arcLength(contour, True)
     approx = cv.approxPolyDP(contour, 0.04 * peri, True)
+    return min_area >= area or len(approx) < 4
 
-    return (min_area >= area > max_area) or len(approx) < 4
+
+def get_polygon(city):
+    """
+    Get polygon based on specific city.
+
+    :param city: city object.
+    """
+
+    polygon = []
+
+    for _city in CITIES:
+        if city["Name"] == _city:
+
+            for _polygon in city["Polygon"]:
+                polygon.append(_polygon)
+
+    return polygon
+
+
+def check_polygon(img, polygons, coordinates):
+    """
+    Check if the coordinates are inside the polygon.
+
+    :param polygons: polygons of the city.
+    :param coordinates: coordinates to check.
+
+    return: bool, True if the coordinates are out the polygon, false otherwise.
+    """
+    is_out = True
+
+    if len(polygons) > 0:
+        centroid = get_centroid(coordinates)
+        point = (int(centroid[0]), int(centroid[1]))
+
+    for polygon in polygons:
+        is_inside = cv.pointPolygonTest(polygon, point, False)
+
+        if is_inside >= 0:
+            is_out = False
+            break
+
+    if is_out:
+        # Todo: delete in the future
+        try:
+            cv.circle(img, point, 35, (0, 0, 255), thickness=10)
+        except:
+            pass
+
+    return is_out
 
 
 def draw_vehicles(vehicles, img):
@@ -113,12 +170,11 @@ def draw_vehicles(vehicles, img):
         set_text(img, num[0], (x + 90, y - 12), color=color, thickness=thick + 1, dim=1.5)
 
 
-def get_coordinates_bb(point_1, point_4):
+def get_coordinates_bb(points):
     """
     Get all cordinates of the bouding box.
 
-    :param point_1: start point of the bouding box.
-    :param point_4: end point of the bouding box.
+    :param points: start point and end point of the bouding box.
 
     point_1: (x_start, y_start)
     point_2: (x_end, y_start)
@@ -128,13 +184,12 @@ def get_coordinates_bb(point_1, point_4):
     :return: array with four coordinates of the bouding box.
     """
 
-    x_start, y_start = point_1
-    x_end, y_end = point_4
+    (x_start, y_start), (x_end, y_end) = points
 
     point_2 = (x_end, y_start)
     point_3 = (x_start, y_end)
 
-    return [point_1, point_2, point_3, point_4]
+    return [(x_start, y_start), point_2, point_3, (x_end, y_end)]
 
 
 def get_centroid(coordinates):
@@ -192,15 +247,11 @@ def delete_item_in_list(list, name):
 
     :return: list updated.
     """
-    length = len(list)
 
     for index, vehicle in enumerate(list):
         if vehicle.name == name:
             del list[index]
             break
-
-    if length == len(list):
-        raise Exception("No items has been deleted")
 
     return list
 
@@ -220,6 +271,7 @@ def check_vehicle_in_list(list, vehicle_to_search):
 
     list.append(vehicle_to_search)
     return list
+
 
 def stack_images(scale, imgArray):
     r"""
@@ -274,3 +326,84 @@ def stack_images(scale, imgArray):
 
     return ver
 
+
+def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
+    """
+    Calculate the direction of the vehicles.
+
+    :param coordinates: coordinates (start point, end point) of the vehicle.
+    :param angle: angle.
+    :param magnitude: magnitude.
+    :param threshold: threshold to filter the direction.
+
+    :return direction of the vehicle.
+    """
+
+    (x_start, y_start), (x_end, y_end) = coordinates
+
+    # Get portion of image
+    angle = angle[y_start:y_end, x_start:x_end]
+    magnitude = magnitude[y_start:y_end, x_start:x_end]
+
+    # Convert angles from radians to degrees
+    angle = np.degrees(angle)
+    magnitude = np.degrees(magnitude)
+
+    move_sense = angle[magnitude > threshold]
+    move_mode = mode(move_sense)[0]
+
+    directions_map = np.zeros([10, 5])
+
+    if 10 < move_mode <= 100:
+        # Down
+        directions_map[-1, 0] = 1
+        directions_map[-1, 1:] = 0
+        directions_map = np.roll(directions_map, -1, axis=0)
+
+    elif 100 < move_mode <= 190:
+        # Right
+        directions_map[-1, 1] = 1
+        directions_map[-1, :1] = 0
+        directions_map[-1, 2:] = 0
+        directions_map = np.roll(directions_map, -1, axis=0)
+
+    elif 190 < move_mode <= 280:
+        # Up
+        directions_map[-1, 2] = 1
+        directions_map[-1, :2] = 0
+        directions_map[-1, 3:] = 0
+        directions_map = np.roll(directions_map, -1, axis=0)
+
+    elif 280 < move_mode or move_mode < 10:
+        # Left
+        directions_map[-1, 3] = 1
+        directions_map[-1, :3] = 0
+        directions_map[-1, 4:] = 0
+        directions_map = np.roll(directions_map, -1, axis=0)
+
+    else:
+        # Stationary
+        directions_map[-1, -1] = 1
+        directions_map[-1, :-1] = 0
+        directions_map = np.roll(directions_map, 1, axis=0)
+
+    loc = directions_map.mean(axis=0).argmax()
+
+    if loc == 0:
+        text = DOWN
+
+    elif loc == 1:
+        text = RIGHT
+
+    elif loc == 2:
+        text = UP
+
+    elif loc == 3:
+        text = LEFT
+
+    else:
+        text = STATIONARY
+
+    print(f"{v}, direction: [{move_mode}] - {text}", end ="\n\n")
+
+    return text
