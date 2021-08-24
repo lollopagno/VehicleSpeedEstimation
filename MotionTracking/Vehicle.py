@@ -11,7 +11,7 @@ class Vehicle:
     Vehicle class.
     """
 
-    def __init__(self, name, coordinates, direction=UNKNOWN):
+    def __init__(self, name, coordinates, color, direction=UNKNOWN):
 
         self.name = name
 
@@ -19,7 +19,7 @@ class Vehicle:
         self.coordinates = coordinates
         self.centroid = Utility.get_centroid(coordinates)
 
-        self.color = Utility.get_random_color()
+        self.color = color
         self.velocity = 0
         self.direction = [direction]
 

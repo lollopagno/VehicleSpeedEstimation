@@ -65,12 +65,34 @@ def get_length(point_1, point_2):
     return math.sqrt(math.pow(point_2[0] - point_1[0], 2) + math.pow((point_2[1] - point_1[1]), 2))
 
 
-def get_random_color():
+def get_random_color(list):
     r"""
     Create a random color rgb.
+
+    :param list: list that contains all colors.
     """
-    color = tuple(np.random.choice(range(256), size=3))
-    return tuple((int(color[0]), int(color[1]), int(color[2])))
+
+    flag_to_exit = True
+    result = None
+
+    while flag_to_exit:
+        color = tuple(np.random.choice(range(256), size=3))
+
+        if len(list) > 0:
+            for index, item in enumerate(list):
+                if item == color:
+                    break
+
+                if index == len(list) - 1:
+                    flag_to_exit = False
+                    result = tuple((int(color[0]), int(color[1]), int(color[2])))
+        else:
+            flag_to_exit = False
+            result = tuple((int(color[0]), int(color[1]), int(color[2])))
+
+    list.append(result)
+
+    return result, list
 
 
 def get_area(contour, min_area=70):
@@ -404,6 +426,6 @@ def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
     else:
         text = STATIONARY
 
-    print(f"{v}, direction: [{move_mode}] - {text}", end ="\n\n")
+    print(f"{v}, direction: [{move_mode}] - {text}", end="\n\n")
 
     return text
