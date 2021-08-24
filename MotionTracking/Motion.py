@@ -413,7 +413,7 @@ class Motion:
 
                 log(0, f"Update {vehicle.name} with min_distance {min_distance} with {new_coordinates}")
 
-                # Update corrdinates
+                # Update coordinates
                 vehicle.set_coordinates(Utility.get_coordinates_bb(points=new_coordinates))
 
                 # Update velocity
@@ -529,28 +529,32 @@ class Motion:
 
         for vehicle in self.current_vehicles:
 
-            intensity = Utility.get_intensity(self.mask_hsv, vehicle.coordinates)
-            print(f"Intensity Vehicle: {vehicle.name}, {vehicle.average_intesity} compare to {intensity_to_compare}")
+            intensity = vehicle.average_intensity
+
+            print(f"Intensity Vehicle: {vehicle.name}, {vehicle.average_intensity} of coordinates "
+                  f"{vehicle.coordinates} compare to {intensity_to_compare} of coordinates {coordinates}")
 
             if not h - values_range <= intensity[0] <= h + values_range:
+                print("Exclude for h")
                 continue
 
             elif not s - values_range <= intensity[1] <= s + values_range:
+                print("Exclude for s")
                 continue
 
             elif not v - values_range <= intensity[2] <= v + values_range:
+                print("Exclude for v")
                 continue
 
-            # TODO fix this! Le bb non vengono considerate intereamente!
             print("Increase bb for intensity")
             (x_start, y_start), _, _, _ = vehicle.coordinates
             _, (x_end, y_end) = coordinates
 
             bb_1 = Utility.get_coordinates_bb(((x_start, y_start), (x_end, y_end)))
-            cnt_1 = [np.array([bb_1], dtype=np.int32)]
+            cnt_1 = np.array([bb_1], dtype=np.int32)
 
             bb_2 = Utility.get_coordinates_bb(((x_end, y_end), (x_start, y_start)))
-            cnt_2 = [np.array([bb_2], dtype=np.int32)]
+            cnt_2 = np.array([bb_2], dtype=np.int32)
 
             if cv.contourArea(cnt_1) >= cv.contourArea(cnt_2):
                 vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start, y_start), (x_end, y_end))))

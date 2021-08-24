@@ -15,14 +15,14 @@ class Vehicle:
 
         self.name = name
 
-        # Array with 4 coordinates of the bouding box.
+        # Array with 4 coordinates of the bounding box.
         self.coordinates = coordinates
         self.centroid = Utility.get_centroid(coordinates)
 
         self.color = Utility.get_random_color()
         self.velocity = 0
         self.direction = [direction]
-        self.average_intesity = av_intensity
+        self.average_intensity = av_intensity
 
         ### Field to manage stationary vehicles ###
         self.is_stationary = False
@@ -33,9 +33,9 @@ class Vehicle:
 
     def set_coordinates(self, new_coordinates):
         """
-        Update cordinates and centroid.
+        Update coordinates and centroid.
 
-        :param new_coordinates: new corddinates.
+        :param new_coordinates: new coordinates.
         """
         self.is_stationary = False
         self.coordinates = new_coordinates
@@ -101,7 +101,12 @@ class Vehicle:
         return text_direction
 
     def set_intensity(self, intensity):
-        self.average_intesity = intensity
+        """
+        Set the new intensity.
+
+        :param intensity: new intensity to update.
+        """
+        self.average_intensity = intensity
 
     def marked_as_stationary(self):
         """
@@ -150,4 +155,4 @@ class Vehicle:
 
         return (Fore.RED + f"[Name]: {self.name}\n[Is stationary]: {self.is_stationary}\n[Velocity]: {self.velocity}\n"
                            f"[Direction]: {self.direction}\n[Color]: {self.color}\n[Coordinates]: {self.coordinates}\n"
-                           f"[Intensity HSV]: {self.average_intesity}")
+                           f"[Intensity HSV]: {self.average_intensity}")
