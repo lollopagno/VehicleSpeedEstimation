@@ -226,7 +226,10 @@ def get_centroid(coordinates):
 
 def get_velocity(distance, fps):
     r"""
-    ....
+    Calculate the velocity.
+
+    :param distance: distance of the vehicle from the previous frame.
+    :param fps: frame rate per second.
     """
     # Conversion factors
     ms2kmh = 3.6
