@@ -1,4 +1,5 @@
 import sys
+import time
 
 import cv2 as cv
 import numpy as np
@@ -9,7 +10,6 @@ from Common import utility as Utility
 from Common.load_video import get_video
 from Common.table import Table
 from Common.utility import log
-from Frame_rate import FrameRate
 from MotionTracking.Motion import Motion
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Dense"
@@ -53,8 +53,10 @@ class OpticalFlowDense:
         self.motion = Motion(self.table)
 
         # Frame Rate
-        x, y = video_url["Frame rate"]
-        self.frame_rate = FrameRate(x=x, y=y)
+        self.frame_rate_x, self.frame_rate_y = video_url["Frame rate"]
+        self.previous_time = 0
+        self.current_time = 0
+        self.fps = 0
 
         self.alpha = 0.5
 
@@ -68,6 +70,19 @@ class OpticalFlowDense:
         self.polygons = None
 
         self.start_video = False
+
+    def frame_rate(self, frame):
+        """
+        Calculates the frame rate.
+
+        :param frame: img to put text.
+        """
+
+        self.current_time = time.time()
+        self.fps = np.divide(1, (self.current_time - self.previous_time))
+        self.previous_time = self.current_time
+        Utility.set_text(frame, f"FPS: {int(self.fps)}", (self.frame_rate_x, self.frame_rate_y), dim=1.5,
+                         color=Color.RED, thickness=2)
 
     def run(self):
         cv.namedWindow(WINDOW_OPTICAL_FLOW)
@@ -86,7 +101,7 @@ class OpticalFlowDense:
         stack = Utility.stack_images(1, ([first_frame, first_frame]))
         cv.imshow(WINDOW_OPTICAL_FLOW, stack)
 
-        mask = cv.resize(np.zeros_like(first_frame), (400,400))
+        mask = cv.resize(np.zeros_like(first_frame), (400, 400))
         stack_mask = Utility.stack_images(1, ([mask, mask]))
         cv.imshow("Masks", stack_mask)
         key = cv.waitKey(0)
@@ -114,7 +129,6 @@ class OpticalFlowDense:
                     frame = cv.medianBlur(frame, ksize=5)
                     frame = cv.resize(frame, (self.width, self.height))
                     frame_copy = frame.copy()
-
                     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
                     if not self.excluded_area:
@@ -125,14 +139,14 @@ class OpticalFlowDense:
                     if not self.excluded_area:
                         frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
 
-                    self.frame_rate.run(frame)
+                    self.frame_rate(frame)
 
                     # Optical Flow Dense
                     flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
                                                        iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
-                    Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45),  dim=1.5, color=Color.RED)
-                    self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.frame_rate.fps,
+                    Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45), dim=1.5, color=Color.RED)
+                    self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.fps,
                                                excluded_area=self.excluded_area, polygons=self.polygons)
 
                     stack = Utility.stack_images(1, ([frame, frame_copy]))
