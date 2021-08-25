@@ -59,7 +59,7 @@ class Motion:
     Class to detect moving vehicles.
     """
 
-    def __init__(self, table):
+    def __init__(self, table, frame_history=25):
         """
         Constructor of class Motion.
 
@@ -94,7 +94,7 @@ class Motion:
         self.vehicles_to_draw = []
 
         # Maximum num frame before deleting the vehicle history
-        self.num_frame_to_remove_vehicle_history = 10
+        self.num_frame_to_remove_vehicle_history = frame_history
 
     def detect_vehicle(self, img, flow, iter, fps, polygons, excluded_area):
         r"""
@@ -485,35 +485,35 @@ class Motion:
         if min_distance < max_distance and result is not None:
 
             # Check if the vehicle is already to be drawn
-            # TODO check this!
-            flag = False
-            for vehicle_to_draw in self.vehicles_to_draw:
-                if result.name == vehicle_to_draw.name:
-                    flag = True
-                    break
+            # # TODO check this!
+            # flag = False
+            # for vehicle_to_draw in self.vehicles_to_draw:
+            #     if result.name == vehicle_to_draw.name:
+            #         flag = True
+            #         break
 
-            if not flag:
-                log(3, f"{_log} {result.name}")
+            #if not flag:
+            log(3, f"{_log} {result.name}")
 
-                # Update direction
-                direction = Utility.get_direction(result.name, coordinates, self.angle, self.magnitude)
-                result.set_direction(direction)
-                self.table.update_table(result.name, COLUMN_DIRECTION, result.get_direction())
+            # Update direction
+            direction = Utility.get_direction(result.name, coordinates, self.angle, self.magnitude)
+            result.set_direction(direction)
+            self.table.update_table(result.name, COLUMN_DIRECTION, result.get_direction())
 
-                # Update coordinates
-                coordinates = Utility.get_coordinates_bb(points=coordinates)
-                result.set_coordinates(coordinates)
+            # Update coordinates
+            coordinates = Utility.get_coordinates_bb(points=coordinates)
+            result.set_coordinates(coordinates)
 
-                # Update intensity
-                intensity = Utility.get_intensity(self.mask_hsv, coordinates)
-                result.set_intensity(intensity)
+            # Update intensity
+            intensity = Utility.get_intensity(self.mask_hsv, coordinates)
+            result.set_intensity(intensity)
 
-                # Update lists
-                self.current_vehicles.append(result)
-                self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, result.name)
-                self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, result)
+            # Update lists
+            self.current_vehicles.append(result)
+            self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, result.name)
+            self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, result)
 
-                return True
+            return True
 
         return False
 
