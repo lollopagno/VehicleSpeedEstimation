@@ -196,14 +196,11 @@ class Motion:
                         coordinates = Utility.get_coordinates_bb(points=coordinates)
                         intensity = Utility.get_intensity(self.mask_hsv, coordinates)
 
-                        v = Vehicle(name, coordinates, intensity, direction)
+                        color, self.color_list = Utility.get_random_color(self.color_list)
+                        v = Vehicle(name, coordinates, intensity, color, direction)
+
                         self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, v)
                         rows_to_add_to_table = Utility.check_vehicle_in_list(rows_to_add_to_table, v)
-
-                    direction = Utility.get_direction(name, ((x, y), (x + w, y + h)), self.angle, self.magnitude)
-                    color, self.color_list = Utility.get_random_color(self.color_list)
-                    v = Vehicle(name, coordinates, color, direction)
-                    intensity = Utility.get_intensity(self.mask_hsv, coordinates)
 
                         self.counter_vehicle += 1
                 else:
@@ -471,7 +468,7 @@ class Motion:
             intensity = Utility.get_intensity(self.mask_hsv, new_coordinates)
 
             color, self.color_list = Utility.get_random_color(self.color_list)
-            vehicle = Vehicle(name, new_coordinates, color, direction)
+            vehicle = Vehicle(name, new_coordinates, intensity, color, direction)
 
             self.current_vehicles.append(vehicle)
             self.counter_vehicle += 1

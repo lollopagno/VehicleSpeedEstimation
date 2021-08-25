@@ -11,7 +11,7 @@ class Vehicle:
     Vehicle class.
     """
 
-    def __init__(self, name, coordinates, av_intensity, direction=UNKNOWN):
+    def __init__(self, name, coordinates, av_intensity, color, direction=UNKNOWN):
 
         self.name = name
 
