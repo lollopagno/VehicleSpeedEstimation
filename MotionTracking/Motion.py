@@ -99,7 +99,7 @@ class Motion:
         min_distance = default_distance
         result = None
 
-        print(f"Search to find minimum distance {_log}")
+        print(f"Search to find minimum distance {_log} with {new_coordinates}")
         for box in list:
 
             if not box.name in dist_already_calculated:
@@ -161,6 +161,8 @@ class Motion:
         self.mask_hsv = cv.addWeighted(mask, 1, mask_rgb, 2, 0)
 
         contours = self.morphological_operations()
+        self.vehicles_to_draw.clear()
+        rows_to_add_to_table = []
 
         if len(self.prev_vehicles) == 0:
             log(0, "NO vehicles (if)")
@@ -171,81 +173,78 @@ class Motion:
 
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
+                coordinates = ((x, y), (x + w, y + h))
 
                 if Utility.get_area(cnt):
                     # Discard small areas
                     continue
 
                 if not excluded_area:
-                    if Utility.check_polygon(img, polygons, coordinates=((x, y), (x + w, y + h))):
+                    if Utility.check_polygon(img, polygons, coordinates=coordinates):
                         # Check if the point is inside the polygon
                         continue
 
-                vehicle = self.check_vehicle_by_colors(((x, y), (x + w, y + h)))
-                if vehicle is not None:
-                    coordinates = (vehicle.coordinates[0], vehicle.coordinates[3])
-                else:
-                    coordinates = ((x, y), (x + w, y + h))
+                v = self.check_vehicle_by_colors(coordinates)
+                if v is None:
+                    # Checks if the vehicle was already tracked
+                    ret, v = self.check_repaint_vehicles(coordinates, "Repaint without vehicles")
 
-                # Checks if the vehicle was already tracked
-                ret, v = self.check_repaint_vehicles(coordinates, "Repaint without vehicles")
+                    if not ret:
+                        # New vehicle added
+                        name = f"Vehicle {self.counter_vehicle + 1}"
+                        direction = Utility.get_direction(name, coordinates, self.angle, self.magnitude)
+                        coordinates = Utility.get_coordinates_bb(points=coordinates)
+                        intensity = Utility.get_intensity(self.mask_hsv, coordinates)
 
-                if not ret:
-                    # New vehicle added
-                    name = f"Vehicle {self.counter_vehicle + 1}"
-                    coordinates = Utility.get_coordinates_bb(points=((x, y), (x + w, y + h)))
+                        v = Vehicle(name, coordinates, intensity, direction)
+                        self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, v)
+                        rows_to_add_to_table = Utility.check_vehicle_in_list(rows_to_add_to_table, v)
 
                     direction = Utility.get_direction(name, ((x, y), (x + w, y + h)), self.angle, self.magnitude)
                     color, self.color_list = Utility.get_random_color(self.color_list)
                     v = Vehicle(name, coordinates, color, direction)
                     intensity = Utility.get_intensity(self.mask_hsv, coordinates)
 
-                    v = Vehicle(name, coordinates, intensity, direction)
+                        self.counter_vehicle += 1
+                else:
+                    self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, v)
+                    rows_to_add_to_table = Utility.check_vehicle_in_list(rows_to_add_to_table, v)
 
-                    log(0, f"Added the new {v.name} with {(x, y), (x + w, y + h)}")
-                    self.current_vehicles.append(v)
-
-                    self.counter_vehicle += 1
-
-                # Updates list to draw vehicles and update table
-                Utility.draw_vehicles([v], img)
-                self.table.add_rows([v])
+            # Updates list to draw vehicles and update table
+            Utility.draw_vehicles(self.vehicles_to_draw, img)
+            self.table.add_rows(rows_to_add_to_table)
 
         else:
             log(0, "YES vehicles (else)")
             """
             Adds new vehicles previous frame.
             """
-
-            self.vehicles_to_draw.clear()
-            rows_to_add_to_table = []
             tmp_new_coordinates = []
 
             for num, cnt in enumerate(contours):
                 (x, y, w, h) = cv.boundingRect(cnt)
+                coordinates = ((x, y), (x + w, y + h))
 
                 if Utility.get_area(cnt):
                     # Discard small areas
                     continue
 
                 if not excluded_area:
-                    if Utility.check_polygon(img, polygons, coordinates=((x, y), (x + w, y + h))):
+                    if Utility.check_polygon(img, polygons, coordinates=coordinates):
                         # Check if the point is inside the polygon
                         continue
 
-                vehicle = self.check_vehicle_by_colors(((x, y), (x + w, y + h)))
-                if vehicle is not None:
-                    coordinates = (vehicle.coordinates[0], vehicle.coordinates[3])
-                else:
-                    coordinates = ((x, y), (x + w, y + h))
+                v = self.check_vehicle_by_colors(coordinates)
+                if v is None:
+                    vehicle = self.tracking(new_coordinates=coordinates, img=img)
 
-                vehicle = self.tracking(new_coordinates=coordinates, img=img)
-
-                if vehicle is None:
-                    tmp_new_coordinates.append([(x, y), (x + w, y + h)])
+                    if vehicle is None:
+                        tmp_new_coordinates.append(coordinates)
+                    else:
+                        # Checks if the vehicle was already tracked to update the new coordinates
+                        self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
                 else:
-                    # Checks if the vehicle was already tracked to update the new coordinates
-                    self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
+                    self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, v)
 
             for coordinates in tmp_new_coordinates:
                 vehicle = self.add_new_vehicles(coordinates)
@@ -548,30 +547,23 @@ class Motion:
                 print("Exclude for h")
                 continue
 
-            elif not s - values_range <= intensity[1] <= s + values_range:
+            if not s - values_range <= intensity[1] <= s + values_range:
                 print("Exclude for s")
                 continue
 
-            elif not v - values_range <= intensity[2] <= v + values_range:
+            if not v - values_range <= intensity[2] <= v + values_range:
                 print("Exclude for v")
                 continue
 
-            print("Increase bb for intensity")
-            (x_start, y_start), _, _, _ = vehicle.coordinates
-            _, (x_end, y_end) = coordinates
+            (x_start_1, y_start_1), _, _, (x_end_1, y_end_1) = vehicle.coordinates
+            (x_start_2, y_start_2), (x_end_2, y_end_2) = coordinates
 
-            bb_1 = Utility.get_coordinates_bb(((x_start, y_start), (x_end, y_end)))
-            cnt_1 = np.array([bb_1], dtype=np.int32)
-
-            bb_2 = Utility.get_coordinates_bb(((x_end, y_end), (x_start, y_start)))
-            cnt_2 = np.array([bb_2], dtype=np.int32)
-
-            if cv.contourArea(cnt_1) >= cv.contourArea(cnt_2):
-                vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start, y_start), (x_end, y_end))))
+            if x_start_1 < x_start_2:
+                print(f"1-BB fusion: {(x_start_1, y_start_1), (x_end_2, y_end_2)}")
+                vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_1, y_start_1), (x_end_2, y_end_2))))
             else:
-                (x_start, y_start), _ = coordinates
-                _, _, _, (x_end, y_end) = vehicle.coordinates
-                vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_end, y_end), (x_start, y_start))))
+                print(f"2-BB fusion: {(x_start_2, y_start_2), (x_end_1, y_end_1)}")
+                vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_2, y_start_2), (x_end_1, y_end_1))))
 
             result = vehicle
             break

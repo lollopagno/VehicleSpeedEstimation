@@ -1,12 +1,12 @@
 import math
-from scipy.stats import mode
 
 import cv2 as cv
 import numpy as np
 from colorama import Style, Fore
-from Common.url import CITIES
+from scipy.stats import mode
 
 import Common.color as Color
+from Common.url import CITIES
 
 UP = "Moving up"
 DOWN = "Moving down"
@@ -387,7 +387,6 @@ def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
 
     :return direction of the vehicle.
     """
-
     (x_start, y_start), (x_end, y_end) = coordinates
 
     # Get portion of image
