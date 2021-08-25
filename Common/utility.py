@@ -125,10 +125,13 @@ def get_intensity(mask, coordinates):
 
     (x_start, y_start), (x_end, y_end) = p1, p4
 
+    mask = mask[y_start:y_end, x_start:x_end]
+    mask = mask[:, :, 0]
+
     try:
-        avg_color_per_row = np.average(mask[y_start:y_end, x_start:x_end], axis=0)
-        avg_color = np.average(avg_color_per_row, axis=0)
-        color_hsv = [round(avg_color[0], 3), round(avg_color[1], 3), round(avg_color[2], 3)]
+        avg_color_per_row = np.average(mask)
+        avg_color = np.average(avg_color_per_row)
+        color_hsv = [round(avg_color)]
     except ZeroDivisionError:
         color_hsv = [0, 0, 0]
 

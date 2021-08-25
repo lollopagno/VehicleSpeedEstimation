@@ -521,43 +521,47 @@ class Motion:
         """
         ....
         """
+        centroid = Utility.get_centroid(coordinates)
         intensity_to_compare = Utility.get_intensity(self.mask_hsv, coordinates)
-        h, s, v = intensity_to_compare
+        h = intensity_to_compare[0]
 
         result = None
-        values_range = 15
+        intensity_range = 100
 
         for vehicle in self.current_vehicles:
 
-            intensity = vehicle.average_intensity
+            distance = Utility.get_length(vehicle.centroid, centroid)
+            if distance <= 50:
 
-            print(f"Intensity Vehicle: {vehicle.name}, {vehicle.average_intensity} of coordinates "
-                  f"{vehicle.coordinates} compare to {intensity_to_compare} of coordinates {coordinates}")
+                intensity = vehicle.average_intensity[0]
 
-            if not h - values_range <= intensity[0] <= h + values_range:
-                print("Exclude for h")
-                continue
+                print(f"Intensity Vehicle: {vehicle.name}, {vehicle.average_intensity} of coordinates "
+                      f"{vehicle.coordinates} compare to {intensity_to_compare} of coordinates {coordinates}")
 
-            if not s - values_range <= intensity[1] <= s + values_range:
-                print("Exclude for s")
-                continue
+                if not h - intensity_range <= intensity <= h + intensity_range:
+                    print("Exclude for h")
+                    continue
 
-            if not v - values_range <= intensity[2] <= v + values_range:
-                print("Exclude for v")
-                continue
+                # if not s - values_range <= intensity[1] <= s + values_range:
+                #     print("Exclude for s")
+                #     continue
+                #
+                # if not v - values_range <= intensity[2] <= v + values_range:
+                #     print("Exclude for v")
+                #     continue
 
-            (x_start_1, y_start_1), _, _, (x_end_1, y_end_1) = vehicle.coordinates
-            (x_start_2, y_start_2), (x_end_2, y_end_2) = coordinates
+                (x_start_1, y_start_1), _, _, (x_end_1, y_end_1) = vehicle.coordinates
+                (x_start_2, y_start_2), (x_end_2, y_end_2) = coordinates
 
-            if x_start_1 < x_start_2:
-                print(f"1-BB fusion: {(x_start_1, y_start_1), (x_end_2, y_end_2)}")
-                vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_1, y_start_1), (x_end_2, y_end_2))))
-            else:
-                print(f"2-BB fusion: {(x_start_2, y_start_2), (x_end_1, y_end_1)}")
-                vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_2, y_start_2), (x_end_1, y_end_1))))
+                if x_start_1 < x_start_2:
+                    print(f"1-BB fusion: {(x_start_1, y_start_1), (x_end_2, y_end_2)}")
+                    vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_1, y_start_1), (x_end_2, y_end_2))))
+                else:
+                    print(f"2-BB fusion: {(x_start_2, y_start_2), (x_end_1, y_end_1)}")
+                    vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_2, y_start_2), (x_end_1, y_end_1))))
 
-            self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
-            result = vehicle
-            break
+                self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
+                result = vehicle
+                break
 
         return result
