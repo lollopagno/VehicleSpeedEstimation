@@ -213,12 +213,12 @@ class Motion:
         self.current_vehicles.clear()
 
         # Deletes vehicles history after N iterations
-        tmp_list = []
-        for del_vehicle in self.deleted_vehicles:
+        tmp_list = self.deleted_vehicles
+        for index, del_vehicle in enumerate(self.deleted_vehicles):
             iter = del_vehicle.iteration
 
-            if not iter == self.iteration - self.num_frame_to_remove_vehicle_history:
-                tmp_list.append(del_vehicle)
+            if iter == self.iteration - self.num_frame_to_remove_vehicle_history:
+                del tmp_list[index]
 
         # Updates vehicles history list
         self.deleted_vehicles = tmp_list.copy()
@@ -485,33 +485,32 @@ class Motion:
         if min_distance < max_distance and result is not None:
 
             # Check if the vehicle is already to be drawn
-            # # TODO check this!
-            # flag = False
-            # for vehicle_to_draw in self.vehicles_to_draw:
-            #     if result.name == vehicle_to_draw.name:
-            #         flag = True
-            #         break
+            flag = False
+            for vehicle_to_draw in self.vehicles_to_draw:
+                if result.name == vehicle_to_draw.name:
+                    flag = True
+                    break
 
-            #if not flag:
-            log(3, f"{_log} {result.name}")
+            if not flag:
+                log(3, f"{_log} {result.name}")
 
-            # Update direction
-            direction = Utility.get_direction(result.name, coordinates, self.angle, self.magnitude)
-            result.set_direction(direction)
-            self.table.update_table(result.name, COLUMN_DIRECTION, result.get_direction())
+                # Update direction
+                direction = Utility.get_direction(result.name, coordinates, self.angle, self.magnitude)
+                result.set_direction(direction)
+                self.table.update_table(result.name, COLUMN_DIRECTION, result.get_direction())
 
-            # Update coordinates
-            coordinates = Utility.get_coordinates_bb(points=coordinates)
-            result.set_coordinates(coordinates)
+                # Update coordinates
+                coordinates = Utility.get_coordinates_bb(points=coordinates)
+                result.set_coordinates(coordinates)
 
-            # Update intensity
-            intensity = Utility.get_intensity(self.mask_hsv, coordinates)
-            result.set_intensity(intensity)
+                # Update intensity
+                intensity = Utility.get_intensity(self.mask_hsv, coordinates)
+                result.set_intensity(intensity)
 
-            # Update lists
-            self.current_vehicles.append(result)
-            self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, result.name)
-            self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, result)
+                # Update lists
+                self.current_vehicles.append(result)
+                self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, result.name)
+                self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, result)
 
             return True
 
@@ -519,7 +518,9 @@ class Motion:
 
     def check_vehicle_by_colors(self, coordinates):
         """
-        ....
+        Check if two vehicles is the same vehicle by colors.
+
+        :param coordinates: coordinates of one of the two vehicles.
         """
         centroid = Utility.get_centroid(coordinates)
         intensity_to_compare = Utility.get_intensity(self.mask_hsv, coordinates)
@@ -541,14 +542,6 @@ class Motion:
                 if not h - intensity_range <= intensity <= h + intensity_range:
                     print("Exclude for h")
                     continue
-
-                # if not s - values_range <= intensity[1] <= s + values_range:
-                #     print("Exclude for s")
-                #     continue
-                #
-                # if not v - values_range <= intensity[2] <= v + values_range:
-                #     print("Exclude for v")
-                #     continue
 
                 (x_start_1, y_start_1), _, _, (x_end_1, y_end_1) = vehicle.coordinates
                 (x_start_2, y_start_2), (x_end_2, y_end_2) = coordinates

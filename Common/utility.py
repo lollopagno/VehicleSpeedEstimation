@@ -95,7 +95,7 @@ def get_random_color(list):
     return result, list
 
 
-def get_area(contour, min_area=70):
+def get_area(contour, min_area=40):
     r"""
     Get the area of a specific contour.
 
@@ -126,7 +126,7 @@ def get_intensity(mask, coordinates):
     (x_start, y_start), (x_end, y_end) = p1, p4
 
     mask = mask[y_start:y_end, x_start:x_end]
-    mask = mask[:, :, 0]
+    mask = mask[:, :, 0]  # Component H
 
     try:
         avg_color_per_row = np.average(mask)

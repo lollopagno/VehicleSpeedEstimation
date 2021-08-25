@@ -2,7 +2,7 @@ from Common import utility as Utility
 from colorama import Fore
 from Common.utility import UP, DOWN, LEFT, RIGHT
 
-num_frame_stationary = 20
+num_frame_stationary = 10
 UNKNOWN = "Unknown"
 
 
