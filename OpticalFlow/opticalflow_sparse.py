@@ -1,11 +1,11 @@
 import cv2 as cv
 import numpy as np
+import time
 
 import Common.color as Color
 import Common.utility as Utility
 import MotionTracking.Motion as motion
 from Common.load_video import get_video
-from Frame_rate import FrameRate
 from MotionTracking.ModuleTracking import TrackingModule
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Sparse"
@@ -56,8 +56,10 @@ class OpticalFlowSparse:
         self.corner_list = []
 
         # Frame Rate
-        x, y = video_url["Frame rate"]
-        self.frame_rate = FrameRate(x=x, y=y)
+        self.frame_rate_x, self.frame_rate_y = video_url["Frame rate"]
+        self.previous_time = 0
+        self.current_time = 0
+        self.fps = 0
 
         self.show_log = show_log
 
@@ -65,6 +67,13 @@ class OpticalFlowSparse:
         self.alpha = 0.5  # Used for addWeighted
         self.ms_2_kmh = 3.6  # Used to convert m/s into km/h
         self.minimum_corners = 5  # Minimum corners to update velocity
+
+    def frame_rate(self, frame):
+        self.current_time = time.time()
+        self.fps = np.divide(1, (self.current_time - self.previous_time))
+        self.previous_time = self.current_time
+        Utility.set_text(frame, f"FPS: {int(self.fps)}", (635, 40), dim=1.5, color=(0, 0, 255),
+                         thickness=2)
 
     def run(self):
 
@@ -113,6 +122,8 @@ class OpticalFlowSparse:
                 frame = cv.resize(frame, (self.width, self.height))
                 frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
                 frame_copy = frame.copy()  # Temporary frame to execute operations
+
+                self.frame_rate(frame)
 
                 img = cv.bitwise_and(frame_copy, frame_copy, mask=view_mask)
 

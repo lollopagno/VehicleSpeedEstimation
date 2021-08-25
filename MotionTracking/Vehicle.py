@@ -19,7 +19,7 @@ class Vehicle:
         self.coordinates = coordinates
         self.centroid = Utility.get_centroid(coordinates)
 
-        self.color = Utility.get_random_color()
+        self.color = color
         self.velocity = 0
         self.direction = [direction]
         self.average_intensity = av_intensity

@@ -73,6 +73,8 @@ class Motion:
         self.deleted_vehicles = []
         self.vehicles_stationary = {}
 
+        self.color_list = []
+
         self.vehicles_to_draw = []
 
         # Maximum num frame before deleting the vehicle history
@@ -194,6 +196,8 @@ class Motion:
                     coordinates = Utility.get_coordinates_bb(points=((x, y), (x + w, y + h)))
 
                     direction = Utility.get_direction(name, ((x, y), (x + w, y + h)), self.angle, self.magnitude)
+                    color, self.color_list = Utility.get_random_color(self.color_list)
+                    v = Vehicle(name, coordinates, color, direction)
                     intensity = Utility.get_intensity(self.mask_hsv, coordinates)
 
                     v = Vehicle(name, coordinates, intensity, direction)
@@ -255,6 +259,11 @@ class Motion:
 
             for vehicle in self.prev_vehicles:
                 # Deletes vehicles to no longer track
+                for index, color in enumerate(self.color_list):
+                    if color == vehicle.color:
+                        del self.color_list[index]
+                        break
+
                 self.table.delete_row(vehicle.name)
 
                 # Add vehicles to history list
@@ -462,7 +471,8 @@ class Motion:
             new_coordinates = Utility.get_coordinates_bb(points=new_coordinates)
             intensity = Utility.get_intensity(self.mask_hsv, new_coordinates)
 
-            vehicle = Vehicle(name, new_coordinates, intensity, direction)
+            color, self.color_list = Utility.get_random_color(self.color_list)
+            vehicle = Vehicle(name, new_coordinates, color, direction)
 
             self.current_vehicles.append(vehicle)
             self.counter_vehicle += 1
