@@ -159,6 +159,7 @@ class Motion:
             """
             tmp_new_coordinates = []
 
+            num_cnt = len(contours)
             for num, cnt in enumerate(contours):
                 ret, coordinates = discard_area(cnt, polygons, img, excluded_area)
 
@@ -193,7 +194,10 @@ class Motion:
                 self.deleted_vehicles.append(vehicle)
 
                 # Remove the vehicle if it was previously stationary
-                self.vehicles_stationary = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
+                self.vehicles_stationary, ret = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
+                if ret:
+                    vehicle.unmarked_as_stationary()
+                    self.table.update_table(vehicle.name, COLUMN_STATIONARY, vehicle.is_stationary)
 
         # Updates lists
         print(f"iter {self.iteration}")
@@ -344,7 +348,10 @@ class Motion:
                 Checks if the vehicles no longer present (out of the scene).
                 """
                 log(0, f"Remove {vehicle.name} (not displayed)")
-                self.vehicles_stationary = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
+                self.vehicles_stationary, ret = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
+                if ret:
+                    vehicle.unmarked_as_stationary()
+                    self.table.update_table(vehicle.name, COLUMN_STATIONARY, vehicle.is_stationary)
 
             elif min_distance == 0:
                 """
@@ -365,7 +372,7 @@ class Motion:
                             stat_vehicle.decrease_frame_stationary()
 
                             self.current_vehicles.append(stat_vehicle)
-                            self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, stat_vehicle.name)
+                            self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, stat_vehicle.name)
                             self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, stat_vehicle)
 
                         elif num_stat == 0:
@@ -377,18 +384,17 @@ class Motion:
 
                     if index + 1 == len(self.vehicles_stationary):
                         # Vehicle wasn't on vehicles_stationary list.
-                        stat_vehicle.marked_as_stationary()
-                        self.table.update_table(stat_vehicle.name, COLUMN_STATIONARY, stat_vehicle.is_stationary)
+                        vehicle.marked_as_stationary()
+                        self.table.update_table(vehicle.name, COLUMN_STATIONARY, vehicle.is_stationary)
 
-                        direction = Utility.get_direction(stat_vehicle.name, coordinates, self.angle,
-                                                          self.magnitude)
-                        stat_vehicle.set_direction(direction)
-                        self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, stat_vehicle.get_direction())
+                        direction = Utility.get_direction(vehicle.name, coordinates, self.angle, self.magnitude)
+                        vehicle.set_direction(direction)
+                        self.table.update_table(vehicle.name, COLUMN_DIRECTION, vehicle.get_direction())
 
-                        tmp_vehicles_stationary.append(stat_vehicle)
-                        self.current_vehicles.append(stat_vehicle)
-                        self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, stat_vehicle.name)
-                        self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, stat_vehicle)
+                        tmp_vehicles_stationary.append(vehicle)
+                        self.current_vehicles.append(vehicle)
+                        self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                        self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
 
                 # Updates stationary list.
                 self.vehicles_stationary = tmp_vehicles_stationary.copy()
@@ -411,7 +417,7 @@ class Motion:
                     self.vehicles_stationary.append(vehicle)
                     self.current_vehicles.append(vehicle)
                     self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
-                    self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                    self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
 
             elif min_distance < max_distance:
                 """
@@ -439,11 +445,14 @@ class Motion:
                 self.table.update_table(vehicle.name, COLUMN_VELOCITY, f"{vehicle.velocity} km/h")
 
                 self.current_vehicles.append(vehicle)
-                self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
                 self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
 
                 # Remove the vehicle if it was previously stationary
-                self.vehicles_stationary = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
+                self.vehicles_stationary, ret = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
+                if ret:
+                    vehicle.unmarked_as_stationary()
+                    self.table.update_table(vehicle.name, COLUMN_STATIONARY, vehicle.is_stationary)
 
         return vehicle
 
@@ -501,7 +510,7 @@ class Motion:
 
                 # Update lists
                 self.current_vehicles.append(result)
-                Utility.delete_item_in_list(self.prev_vehicles, result.name)
+                self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, result.name)
                 self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, result)
 
                 return True

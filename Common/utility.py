@@ -298,12 +298,14 @@ def delete_item_in_list(list, name):
     :return: list updated.
     """
 
+    is_deleted = False
     for index, vehicle in enumerate(list):
         if vehicle.name == name:
             del list[index]
+            is_deleted = True
             break
 
-    return list
+    return list, is_deleted
 
 
 def check_vehicle_in_list(list, vehicle_to_search):
