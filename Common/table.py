@@ -175,7 +175,7 @@ class Table(QWidget):
 
     def update_table(self, name_vehicle, name_column, data):
         r"""
-        Update informations of the vehicles into table.
+        Update information of the vehicles into table.
 
         :param name_vehicle: vehicle name.
         :param name_column: column to be updated.
@@ -196,7 +196,7 @@ class Table(QWidget):
                     if cell == name_vehicle:
                         index = get_column_index(name_column)
 
-                        item_cell = QTableWidgetItem(data)
+                        item_cell = QTableWidgetItem(str(data))
                         item_cell.setTextAlignment(Qt.AlignHCenter)
 
                         log(2, f"Update {name_column} [{data}] of row: {name_vehicle}")

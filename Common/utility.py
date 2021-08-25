@@ -113,7 +113,7 @@ def get_area(contour, min_area=70):
 
 def get_intensity(mask, coordinates):
     """
-    Gets averege value among the intensity of the pixels.
+    Gets average value among the intensity of the pixels.
 
     :param mask: mask.
     :param coordinates: coordinates of the area to calculate the average.
@@ -168,12 +168,13 @@ def check_polygon(img, polygons, coordinates):
         centroid = get_centroid(coordinates)
         point = (int(centroid[0]), int(centroid[1]))
 
-    for polygon in polygons:
-        is_inside = cv.pointPolygonTest(polygon, point, False)
+        for polygon in polygons:
+            is_inside = cv.pointPolygonTest(polygon, point, False)
 
-        if is_inside >= 0:
-            is_out = False
-            break
+            if is_inside >= 0:
+                # Point is inside the polygon
+                is_out = False
+                break
 
     if is_out:
         # Todo: delete in the future

@@ -3,7 +3,7 @@ import numpy as np
 
 import Common.color as Color
 import Common.utility as Utility
-from Common.table import COLUMN_VELOCITY, COLUMN_DIRECTION
+from Common.table import COLUMN_VELOCITY, COLUMN_DIRECTION, COLUMN_STATIONARY
 from Common.utility import log
 from MotionTracking.Vehicle import UNKNOWN
 from MotionTracking.Vehicle import Vehicle
@@ -36,6 +36,22 @@ def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5),
             continue
 
         cv.rectangle(img, (x, y), (x + w, y + h), Color.RED, 2)
+
+
+def discard_area(cnt, polygons, img, excluded_area):
+    (x, y, w, h) = cv.boundingRect(cnt)
+    coordinates = ((x, y), (x + w, y + h))
+
+    if Utility.get_area(cnt):
+        # Discard small areas
+        return True, []
+
+    if not excluded_area:
+        if Utility.check_polygon(img, polygons, coordinates=coordinates):
+            # Check if the point is inside the polygon
+            return True, []
+
+    return False, coordinates
 
 
 class Motion:
@@ -71,7 +87,7 @@ class Motion:
         self.prev_vehicles = []
         self.current_vehicles = []
         self.deleted_vehicles = []
-        self.vehicles_stationary = {}
+        self.vehicles_stationary = []
 
         self.color_list = []
 
@@ -79,60 +95,6 @@ class Motion:
 
         # Maximum num frame before deleting the vehicle history
         self.num_frame_to_remove_vehicle_history = 10
-
-    def get_distance(self, new_coordinates, list, max_distance, _log, default_distance=150):
-        """
-        Calculates the distance among all vehicles detected.
-
-        :param new_coordinates: coordinates of the next bounding box (vehicle)
-        :param list: list of vehicles to loop.
-        :param max_distance: maximum allowable distance in the search for the vehicle.
-        :param default_distance: default value minimum distance.
-
-        :return min_distance: smaller distance located relative to new_coordinates.
-        :return result: information of the vehicle extracted on the basis of new_coordinates.
-        """
-
-        new_centroid = Utility.get_centroid(new_coordinates)
-        dist_already_calculated = []
-
-        min_distance = default_distance
-        result = None
-
-        print(f"Search to find minimum distance {_log} with {new_coordinates}")
-        for box in list:
-
-            if not box.name in dist_already_calculated:
-                print(f"{box.name}:  {box.coordinates}, new_coordinates: {new_coordinates}")
-                dist_already_calculated.append(box.name)
-
-                _centroid = box.centroid
-                distance = Utility.get_length(new_centroid, _centroid)
-
-                print(f"Min distance [{min_distance}], distance: [{distance}]\n")
-
-                if max_distance > distance >= 0:
-
-                    direction = Utility.get_direction(f"Vehicle [{box.name}] to find", new_coordinates, self.angle,
-                                                      self.magnitude)
-
-                    if (box.get_direction() == UNKNOWN or direction == box.get_direction()) or distance <= 50:
-
-                        if min_distance == default_distance or distance < min_distance:
-                            # Updates variables
-                            min_distance = distance  # Minimum distance between vehicles
-                            result = box  # Vehicle to be returned
-
-                            log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
-
-                            if min_distance == 0:
-                                break
-
-        name = None
-        if result is not None:
-            name = result.name
-        print(f"Returned value with {min_distance} of {name}")
-        return min_distance, result
 
     def detect_vehicle(self, img, flow, iter, fps, polygons, excluded_area):
         r"""
@@ -162,7 +124,6 @@ class Motion:
 
         contours = self.morphological_operations()
         self.vehicles_to_draw.clear()
-        rows_to_add_to_table = []
 
         if len(self.prev_vehicles) == 0:
             log(0, "NO vehicles (if)")
@@ -171,45 +132,25 @@ class Motion:
             when the scene is devoid of vehicles.
             """
 
+            num_cnt = len(contours)
             for num, cnt in enumerate(contours):
-                (x, y, w, h) = cv.boundingRect(cnt)
-                coordinates = ((x, y), (x + w, y + h))
+                ret, coordinates = discard_area(cnt, polygons, img, excluded_area)
 
-                if Utility.get_area(cnt):
-                    # Discard small areas
+                if ret:
                     continue
 
-                if not excluded_area:
-                    if Utility.check_polygon(img, polygons, coordinates=coordinates):
-                        # Check if the point is inside the polygon
-                        continue
-
-                v = self.check_vehicle_by_colors(coordinates)
-                if v is None:
+                vehicle = self.check_vehicle_by_colors(coordinates)
+                if vehicle is None:
                     # Checks if the vehicle was already tracked
-                    ret, v = self.check_repaint_vehicles(coordinates, "Repaint without vehicles")
+                    ret = self.check_repaint_vehicles(coordinates, "Repaint without vehicles")
 
                     if not ret:
                         # New vehicle added
-                        name = f"Vehicle {self.counter_vehicle + 1}"
-                        direction = Utility.get_direction(name, coordinates, self.angle, self.magnitude)
-                        coordinates = Utility.get_coordinates_bb(points=coordinates)
-                        intensity = Utility.get_intensity(self.mask_hsv, coordinates)
-
-                        color, self.color_list = Utility.get_random_color(self.color_list)
-                        v = Vehicle(name, coordinates, intensity, color, direction)
-
-                        self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, v)
-                        rows_to_add_to_table = Utility.check_vehicle_in_list(rows_to_add_to_table, v)
-
-                        self.counter_vehicle += 1
-                else:
-                    self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, v)
-                    rows_to_add_to_table = Utility.check_vehicle_in_list(rows_to_add_to_table, v)
+                        self.create_new_vehicle(coordinates)
 
             # Updates list to draw vehicles and update table
             Utility.draw_vehicles(self.vehicles_to_draw, img)
-            self.table.add_rows(rows_to_add_to_table)
+            self.table.add_rows(self.vehicles_to_draw)
 
         else:
             log(0, "YES vehicles (else)")
@@ -219,42 +160,27 @@ class Motion:
             tmp_new_coordinates = []
 
             for num, cnt in enumerate(contours):
-                (x, y, w, h) = cv.boundingRect(cnt)
-                coordinates = ((x, y), (x + w, y + h))
+                ret, coordinates = discard_area(cnt, polygons, img, excluded_area)
 
-                if Utility.get_area(cnt):
-                    # Discard small areas
+                if ret:
                     continue
 
-                if not excluded_area:
-                    if Utility.check_polygon(img, polygons, coordinates=coordinates):
-                        # Check if the point is inside the polygon
-                        continue
-
-                v = self.check_vehicle_by_colors(coordinates)
-                if v is None:
-                    vehicle = self.tracking(new_coordinates=coordinates, img=img)
+                vehicle = self.check_vehicle_by_colors(coordinates)
+                if vehicle is None:
+                    vehicle = self.tracking(coordinates=coordinates, img=img)
 
                     if vehicle is None:
                         tmp_new_coordinates.append(coordinates)
-                    else:
-                        # Checks if the vehicle was already tracked to update the new coordinates
-                        self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
-                else:
-                    self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, v)
 
             for coordinates in tmp_new_coordinates:
-                vehicle = self.add_new_vehicles(coordinates)
-                rows_to_add_to_table.append(vehicle)
-
-                # Checks if the vehicle was already tracked to update the new coordinates
-                self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
+                self.add_new_vehicles(coordinates)
 
             Utility.draw_vehicles(self.vehicles_to_draw, img)
-            self.table.add_rows(rows_to_add_to_table)
+            self.table.add_rows(self.vehicles_to_draw)
 
             for vehicle in self.prev_vehicles:
                 # Deletes vehicles to no longer track
+
                 for index, color in enumerate(self.color_list):
                     if color == vehicle.color:
                         del self.color_list[index]
@@ -266,11 +192,8 @@ class Motion:
                 vehicle.set_iteration(self.iteration)
                 self.deleted_vehicles.append(vehicle)
 
-                try:
-                    # Remove the vehicle if it was previously stationary
-                    del self.vehicles_stationary[vehicle.name]
-                except KeyError:
-                    pass
+                # Remove the vehicle if it was previously stationary
+                self.vehicles_stationary = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
 
         # Updates lists
         print(f"iter {self.iteration}")
@@ -295,6 +218,61 @@ class Motion:
 
         # Updates vehicles history list
         self.deleted_vehicles = tmp_list.copy()
+
+    def get_distance(self, coordinates, list, max_distance, _log, default_distance=150):
+        """
+        Calculates the distance among all vehicles detected.
+
+        :param coordinates: coordinates of the next bounding box (vehicle)
+        :param list: list of vehicles to loop.
+        :param max_distance: maximum allowable distance in the search for the vehicle.
+        :param default_distance: default value minimum distance.
+
+        :return min_distance: smaller distance located relative to new_coordinates.
+        :return result: information of the vehicle extracted on the basis of new_coordinates.
+        """
+
+        new_centroid = Utility.get_centroid(coordinates)
+        dist_already_calculated = []
+
+        min_distance = default_distance
+        result = None
+
+        print(f"Search to find minimum distance {_log} with {coordinates}")
+        for box in list:
+
+            if not box.name in dist_already_calculated:
+                # Check if the vehicle has been already controlled.
+                dist_already_calculated.append(box.name)
+
+                _centroid = box.centroid
+                distance = Utility.get_length(new_centroid, _centroid)
+
+                if max_distance > distance >= 0:
+                    # Check if the vehicle has a distance between the values.
+
+                    direction = Utility.get_direction(f"Vehicle [{box.name}] to find", coordinates, self.angle,
+                                                      self.magnitude)
+
+                    if (box.get_direction() == UNKNOWN or direction == box.get_direction()) \
+                            or distance <= 50:  # TODO check this distance
+                        # Check if the vehicle has the same direction
+
+                        if min_distance == default_distance or distance < min_distance:
+                            # Updates variables
+                            min_distance = distance  # Minimum distance between vehicles
+                            result = box  # Vehicle to be returned
+
+                            log(0, f"Update bounding box for {box.name}, [Distance]: {min_distance} with {_log}")
+
+                            if min_distance == 0:
+                                break
+
+        name = None
+        if result is not None:
+            name = result.name
+        print(f"Returned value with {min_distance} of {name}")
+        return min_distance, result
 
     def morphological_operations(self):
         """
@@ -327,18 +305,34 @@ class Motion:
 
         return contours
 
-    def tracking(self, new_coordinates, img, max_distance=30):
+    def create_new_vehicle(self, coordinates):
+        name = f"Vehicle {self.counter_vehicle + 1}"
+        log(0, f"Added the new {name} with coordinates {coordinates}")
+
+        # Update vehicles list
+        direction = Utility.get_direction(name, coordinates, self.angle, self.magnitude)
+        coordinates = Utility.get_coordinates_bb(points=coordinates)
+        intensity = Utility.get_intensity(self.mask_hsv, coordinates)
+
+        color, self.color_list = Utility.get_random_color(self.color_list)
+        vehicle = Vehicle(name, coordinates, intensity, color, direction)
+
+        self.current_vehicles.append(vehicle)
+        self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
+        self.counter_vehicle += 1
+
+    def tracking(self, coordinates, img, max_distance=30):
         """
         Tracking vehicles based on the minimum distance between all bounding boxes.
 
-        :param new_coordinates: coordinates of the next bounding box (vehicle).
+        :param coordinates: coordinates of the next bounding box (vehicle).
         :param img: img to draw in.
         :param max_distance: maximum distance in pixel allowed.
 
         :return vehicle: if different from None, return vehicle object
         """
 
-        min_distance, vehicle = self.get_distance(new_coordinates,
+        min_distance, vehicle = self.get_distance(coordinates,
                                                   self.prev_vehicles,
                                                   max_distance=max_distance,
                                                   _log="add new_vehicles")
@@ -350,6 +344,7 @@ class Motion:
                 Checks if the vehicles no longer present (out of the scene).
                 """
                 log(0, f"Remove {vehicle.name} (not displayed)")
+                self.vehicles_stationary = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
 
             elif min_distance == 0:
                 """
@@ -357,9 +352,9 @@ class Motion:
                 """
 
                 # Temporary list to modify it a run time.
-                tmp_vehicles_stationary = self.vehicles_stationary
+                tmp_vehicles_stationary = self.vehicles_stationary.copy()
 
-                for index, stat_vehicle in enumerate(self.vehicles_stationary.items()):
+                for index, stat_vehicle in enumerate(self.vehicles_stationary):
 
                     if stat_vehicle.name == vehicle.name:
                         # Search for vehicles in the list of stationary vehicles.
@@ -370,67 +365,74 @@ class Motion:
                             stat_vehicle.decrease_frame_stationary()
 
                             self.current_vehicles.append(stat_vehicle)
-                            self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                            self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, stat_vehicle.name)
+                            self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, stat_vehicle)
 
                         elif num_stat == 0:
                             # Deletes vehicle in the list of stationary vehicles. No tracking.
                             stat_vehicle.unmarked_as_stationary()
-
-                            direction = Utility.get_direction(stat_vehicle.name, new_coordinates, self.angle,
-                                                              self.magnitude)
-                            stat_vehicle.set_direction(direction)
-                            self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, stat_vehicle.get_direction())
-
-                            del tmp_vehicles_stationary[stat_vehicle.name]
+                            self.table.update_table(stat_vehicle.name, COLUMN_STATIONARY, stat_vehicle.is_stationary)
+                            del tmp_vehicles_stationary[index]
                         break
 
-                    if index + 1 == len(tmp_vehicles_stationary):
+                    if index + 1 == len(self.vehicles_stationary):
                         # Vehicle wasn't on vehicles_stationary list.
                         stat_vehicle.marked_as_stationary()
+                        self.table.update_table(stat_vehicle.name, COLUMN_STATIONARY, stat_vehicle.is_stationary)
 
-                        direction = Utility.get_direction(stat_vehicle.name, new_coordinates, self.angle,
+                        direction = Utility.get_direction(stat_vehicle.name, coordinates, self.angle,
                                                           self.magnitude)
                         stat_vehicle.set_direction(direction)
                         self.table.update_table(stat_vehicle.name, COLUMN_DIRECTION, stat_vehicle.get_direction())
 
+                        tmp_vehicles_stationary.append(stat_vehicle)
                         self.current_vehicles.append(stat_vehicle)
-                        self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                        self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, stat_vehicle.name)
+                        self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, stat_vehicle)
+
+                # Updates stationary list.
+                self.vehicles_stationary = tmp_vehicles_stationary.copy()
 
                 if len(self.vehicles_stationary) == 0:
                     # The list of the stationary vehicles is empty.
                     log(0, f"Added new {vehicle.name} as stationary vehicle.")
                     vehicle.marked_as_stationary()
+                    self.table.update_table(vehicle.name, COLUMN_STATIONARY, vehicle.is_stationary)
 
-                    direction = Utility.get_direction(vehicle.name, new_coordinates, self.angle, self.magnitude)
+                    # Update direction
+                    direction = Utility.get_direction(vehicle.name, coordinates, self.angle, self.magnitude)
                     vehicle.set_direction(direction)
                     self.table.update_table(vehicle.name, COLUMN_DIRECTION, vehicle.get_direction())
 
-                    self.current_vehicles.append(vehicle)
-                    self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                    # Update intensity
+                    intensity = Utility.get_intensity(self.mask_hsv, coordinates)
+                    vehicle.set_intensity(intensity)
 
-                # Updates stationary list.
-                self.vehicles_stationary = tmp_vehicles_stationary
+                    self.vehicles_stationary.append(vehicle)
+                    self.current_vehicles.append(vehicle)
+                    self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
+                    self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
 
             elif min_distance < max_distance:
                 """
                 Adds new vehicles present to the previous frame.
                 """
 
-                log(0, f"Update {vehicle.name} with min_distance {min_distance} with {new_coordinates}")
+                log(0, f"Update {vehicle.name} with min_distance {min_distance} with {coordinates}")
 
                 # Update coordinates
-                vehicle.set_coordinates(Utility.get_coordinates_bb(points=new_coordinates))
+                vehicle.set_coordinates(Utility.get_coordinates_bb(points=coordinates))
 
                 # Update velocity
                 velocity = Utility.get_velocity(distance=min_distance, fps=self.fps)
                 vehicle.set_velocity(velocity)
 
                 # Update direction
-                direction = Utility.get_direction(vehicle.name, new_coordinates, self.angle, self.magnitude)
+                direction = Utility.get_direction(vehicle.name, coordinates, self.angle, self.magnitude)
                 vehicle.set_direction(direction)
 
                 # Update intensity
-                intensity = Utility.get_intensity(self.mask_hsv, vehicle.coordinates)
+                intensity = Utility.get_intensity(self.mask_hsv, coordinates)
                 vehicle.set_intensity(intensity)
 
                 self.table.update_table(vehicle.name, COLUMN_DIRECTION, vehicle.get_direction())
@@ -438,46 +440,26 @@ class Motion:
 
                 self.current_vehicles.append(vehicle)
                 self.prev_vehicles = Utility.delete_item_in_list(self.prev_vehicles, vehicle.name)
+                self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
 
-                try:
-                    # Remove the vehicle if it was previously stationary
-                    del self.vehicles_stationary[vehicle.name]
-                except KeyError:
-                    pass
+                # Remove the vehicle if it was previously stationary
+                self.vehicles_stationary = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
 
         return vehicle
 
-    def add_new_vehicles(self, new_coordinates):
+    def add_new_vehicles(self, coordinates):
         """
         Adds new vehicles when not present at the previous frame.
 
-        :param new_coordinates:  coordinates of the next bounding box (vehicle).
+        :param coordinates:  coordinates of the next bounding box (vehicle).
 
         :return vehicle: vehicle to be drawn.
         """
-        ret, vehicle = self.check_repaint_vehicles(new_coordinates, "Repaint in add_vehicles ")
+        ret = self.check_repaint_vehicles(coordinates, "Repaint in add_vehicles ")
 
         if not ret:
             # New vehicle added to the scene
-            name = f"Vehicle {self.counter_vehicle + 1}"
-            log(0, f"Added the new {name} with coordinates {new_coordinates}")
-
-            # Update vehicles list
-            direction = Utility.get_direction(name, new_coordinates, self.angle, self.magnitude)
-            new_coordinates = Utility.get_coordinates_bb(points=new_coordinates)
-            intensity = Utility.get_intensity(self.mask_hsv, new_coordinates)
-
-            color, self.color_list = Utility.get_random_color(self.color_list)
-            vehicle = Vehicle(name, new_coordinates, intensity, color, direction)
-
-            self.current_vehicles.append(vehicle)
-            self.counter_vehicle += 1
-
-        else:
-            vehicle.set_iteration(self.prev_vehicles)
-            self.deleted_vehicles.append(vehicle)
-
-        return vehicle
+            self.create_new_vehicle(coordinates)
 
     def check_repaint_vehicles(self, coordinates, _log):
         """
@@ -494,6 +476,7 @@ class Motion:
         if min_distance < max_distance and result is not None:
 
             # Check if the vehicle is already to be drawn
+            # TODO check this!
             flag = False
             for vehicle_to_draw in self.vehicles_to_draw:
                 if result.name == vehicle_to_draw.name:
@@ -503,6 +486,7 @@ class Motion:
             if not flag:
                 log(3, f"{_log} {result.name}")
 
+                # Update direction
                 direction = Utility.get_direction(result.name, coordinates, self.angle, self.magnitude)
                 result.set_direction(direction)
                 self.table.update_table(result.name, COLUMN_DIRECTION, result.get_direction())
@@ -518,10 +502,11 @@ class Motion:
                 # Update lists
                 self.current_vehicles.append(result)
                 Utility.delete_item_in_list(self.prev_vehicles, result.name)
+                self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, result)
 
-                return True, result
+                return True
 
-        return False, None
+        return False
 
     def check_vehicle_by_colors(self, coordinates):
         """
@@ -562,6 +547,7 @@ class Motion:
                 print(f"2-BB fusion: {(x_start_2, y_start_2), (x_end_1, y_end_1)}")
                 vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_2, y_start_2), (x_end_1, y_end_1))))
 
+            self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
             result = vehicle
             break
 
