@@ -317,6 +317,12 @@ class Motion:
         return contours
 
     def create_new_vehicle(self, coordinates):
+        """
+        Create a new vehicles.
+
+        :param coordinates: coordinates of the vehicle.
+        """
+
         name = f"Vehicle {self.counter_vehicle + 1}"
         log(0, f"Added the new {name} with coordinates {coordinates}")
 
@@ -355,6 +361,8 @@ class Motion:
                 Checks if the vehicles no longer present (out of the scene).
                 """
                 log(0, f"Remove {vehicle.name} (not displayed)")
+                self.deleted_vehicles, _ = Utility.delete_all_items_in_list(self.deleted_vehicles, vehicle.name)
+                self.prev_vehicles, _ = Utility.delete_all_items_in_list(self.prev_vehicles, vehicle.name)
                 self.vehicles_stationary, ret = Utility.delete_item_in_list(self.vehicles_stationary, vehicle.name)
                 if ret:
                     vehicle.unmarked_as_stationary()

@@ -311,6 +311,26 @@ def delete_item_in_list(list, name):
     return list, is_deleted
 
 
+def delete_all_items_in_list(list, name):
+    r"""
+    Delete all vehicles by name in list.
+
+    :param list: list of vehicles.
+    :param name: name of vehicle to be deleted.
+
+    :return: list updated.
+    """
+
+    is_deleted = False
+    tmp_list = list.copy()
+    for index, vehicle in enumerate(list):
+        if vehicle.name == name:
+            del tmp_list[index]
+            is_deleted = True
+
+    return tmp_list, is_deleted
+
+
 def check_vehicle_in_list(list, vehicle_to_search):
     r"""
     Check if name is present in list. If present, deletes this name in the list and reinsertes it.
