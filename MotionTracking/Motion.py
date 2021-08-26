@@ -39,6 +39,15 @@ def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5),
 
 
 def discard_area(cnt, polygons, img, excluded_area):
+    """
+    Discard the area if it is too small or if the point isn't inside the polygon.
+
+    :param cnt: contourn.
+    :param polygons: polygons.
+    :param img: img.
+    :param excluded_area: bool, if true it doesn't consider the polygon.
+    """
+
     (x, y, w, h) = cv.boundingRect(cnt)
     coordinates = ((x, y), (x + w, y + h))
 
@@ -132,7 +141,6 @@ class Motion:
             when the scene is devoid of vehicles.
             """
 
-            num_cnt = len(contours)
             for num, cnt in enumerate(contours):
                 ret, coordinates = discard_area(cnt, polygons, img, excluded_area)
 
@@ -159,7 +167,6 @@ class Motion:
             """
             tmp_new_coordinates = []
 
-            num_cnt = len(contours)
             for num, cnt in enumerate(contours):
                 ret, coordinates = discard_area(cnt, polygons, img, excluded_area)
 
@@ -524,7 +531,6 @@ class Motion:
         """
         centroid = Utility.get_centroid(coordinates)
         intensity_to_compare = Utility.get_intensity(self.mask_hsv, coordinates)
-        h = intensity_to_compare[0]
 
         result = None
         intensity_range = 100
@@ -534,12 +540,12 @@ class Motion:
             distance = Utility.get_length(vehicle.centroid, centroid)
             if distance <= 50:
 
-                intensity = vehicle.average_intensity[0]
+                intensity = vehicle.average_intensity
 
                 print(f"Intensity Vehicle: {vehicle.name}, {vehicle.average_intensity} of coordinates "
                       f"{vehicle.coordinates} compare to {intensity_to_compare} of coordinates {coordinates}")
 
-                if not h - intensity_range <= intensity <= h + intensity_range:
+                if not intensity_to_compare - intensity_range <= intensity <= intensity_to_compare + intensity_range:
                     print("Exclude for h")
                     continue
 
@@ -548,10 +554,12 @@ class Motion:
 
                 if x_start_1 < x_start_2:
                     print(f"1-BB fusion: {(x_start_1, y_start_1), (x_end_2, y_end_2)}")
-                    vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_1, y_start_1), (x_end_2, y_end_2))))
+                    vehicle.set_coordinates(
+                        Utility.get_coordinates_bb(points=((x_start_1, y_start_1), (x_end_2, y_end_2))))
                 else:
                     print(f"2-BB fusion: {(x_start_2, y_start_2), (x_end_1, y_end_1)}")
-                    vehicle.set_coordinates(Utility.get_coordinates_bb(points=((x_start_2, y_start_2), (x_end_1, y_end_1))))
+                    vehicle.set_coordinates(
+                        Utility.get_coordinates_bb(points=((x_start_2, y_start_2), (x_end_1, y_end_1))))
 
                 self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, vehicle)
                 result = vehicle

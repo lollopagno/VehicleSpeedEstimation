@@ -131,9 +131,9 @@ def get_intensity(mask, coordinates):
     try:
         avg_color_per_row = np.average(mask)
         avg_color = np.average(avg_color_per_row)
-        color_hsv = [round(avg_color)]
+        color_hsv = round(avg_color)
     except ZeroDivisionError:
-        color_hsv = [0, 0, 0]
+        color_hsv = 0
 
     return color_hsv
 
@@ -414,14 +414,14 @@ def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
         directions_map[-1, 1:] = 0
         directions_map = np.roll(directions_map, -1, axis=0)
 
-    elif 70 < move_mode <= 160:
+    elif 70 < move_mode <= 180:
         # Right
         directions_map[-1, 1] = 1
         directions_map[-1, :1] = 0
         directions_map[-1, 2:] = 0
         directions_map = np.roll(directions_map, -1, axis=0)
 
-    elif 160 < move_mode <= 250:
+    elif 180 < move_mode <= 250:
         # Up
         directions_map[-1, 2] = 1
         directions_map[-1, :2] = 0
