@@ -147,10 +147,6 @@ class OpticalFlowDense:
 
                     Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45), dim=1.5, color=Color.RED)
 
-                    if self.iterations == 607:
-                        # TODO debug
-                        print("ok")
-
                     self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.fps,
                                                excluded_area=self.excluded_area, polygons=self.polygons)
 
