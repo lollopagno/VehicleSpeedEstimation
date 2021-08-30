@@ -118,6 +118,7 @@ def get_intensity(mask, coordinates):
     :param mask: mask.
     :param coordinates: coordinates of the area to calculate the average.
     """
+
     try:
         p1, _, _, p4 = coordinates
     except:
@@ -179,21 +180,15 @@ def check_polygon(img, polygons, coordinates):
                 is_out = False
                 break
 
-    if is_out:
-        # Todo: delete in the future
-        try:
-            cv.circle(img, point, 35, (0, 0, 255), thickness=10)
-        except:
-            pass
-
     return is_out
 
 
-def draw_vehicles(vehicles, img):
+def draw_vehicles(vehicles, iteration, img):
     r"""
     Draw the bounding box of a vehicle.
 
     :param img: img to draw in.
+    :param iteration: current iteration.
     :param vehicles: vehicles to draw.
     """
 
@@ -201,6 +196,8 @@ def draw_vehicles(vehicles, img):
 
     for vehicle in vehicles:
         log(3, vehicle.name)
+
+        vehicle.set_iteration(iteration)
 
         thick = int((height + width) // 900)
 
@@ -234,7 +231,10 @@ def get_coordinates_bb(points):
     :return: array with four coordinates of the bouding box.
     """
 
-    (x_start, y_start), (x_end, y_end) = points
+    try:
+        (x_start, y_start), (x_end, y_end) = points
+    except:
+        (x_start, y_start), _, _, (x_end, y_end) = points
 
     point_2 = (x_end, y_start)
     point_3 = (x_start, y_end)
@@ -266,7 +266,7 @@ def get_velocity(distance, fps):
     return distance * ms2kmh * fps * px2m
 
 
-def check_exit_to_the_scene(img, coordinates, max_value=10):
+def check_exit_to_the_scene(img, coordinates, max_value=5):
     r"""
     The functions checks if the vehicle leave to the scene.
 
@@ -277,7 +277,11 @@ def check_exit_to_the_scene(img, coordinates, max_value=10):
     :return: True if the vehicle is out of the scene, otherwise False.
     """
 
-    (x_start, y_start), (x_end, y_end) = coordinates[0], coordinates[3]
+    try:
+        (x_start, y_start), (x_end, y_end) = coordinates[0], coordinates[3]
+    except:
+        (x_start, y_start), (x_end, y_end) = coordinates[0], coordinates[1]
+
     height, width, _ = img.shape
 
     if (x_start <= max_value and x_end <= max_value) or (x_start >= width - max_value and x_end >= width - max_value):
@@ -323,9 +327,11 @@ def delete_all_items_in_list(list, name):
 
     is_deleted = False
     tmp_list = list.copy()
+    count_deleted = 0
     for index, vehicle in enumerate(list):
         if vehicle.name == name:
-            del tmp_list[index]
+            del tmp_list[index - count_deleted]
+            count_deleted += 1
             is_deleted = True
 
     return tmp_list, is_deleted

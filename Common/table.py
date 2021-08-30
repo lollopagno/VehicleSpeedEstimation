@@ -68,7 +68,7 @@ class Table(QWidget):
         """
         Close the window.
         """
-        
+
         try:
             self.table.close()
             self.destroy()

@@ -2,7 +2,6 @@ from Common import utility as Utility
 from colorama import Fore
 from Common.utility import UP, DOWN, LEFT, RIGHT
 
-num_frame_stationary = 10
 UNKNOWN = "Unknown"
 
 
@@ -11,7 +10,7 @@ class Vehicle:
     Vehicle class.
     """
 
-    def __init__(self, name, coordinates, av_intensity, color, direction=UNKNOWN):
+    def __init__(self, name, coordinates, av_intensity, color, num_iter_stat, direction=UNKNOWN):
 
         self.name = name
 
@@ -29,7 +28,7 @@ class Vehicle:
         self.iteration = 0
 
         # Minimum num frame before deleting the vehicle (if stationary)
-        self.num_frame_to_remove_vehicle = num_frame_stationary
+        self.num_frame_to_remove_vehicle = num_iter_stat
 
     def set_coordinates(self, new_coordinates):
         """
@@ -37,7 +36,6 @@ class Vehicle:
 
         :param new_coordinates: new coordinates.
         """
-        self.is_stationary = False
         self.coordinates = new_coordinates
         self.centroid = Utility.get_centroid(new_coordinates)
 
@@ -113,18 +111,17 @@ class Vehicle:
         Mark the vehicle as stationary.
         """
         self.is_stationary = True
-        self.velocity = 0
 
-    def unmarked_as_stationary(self):
+    def unmarked_as_stationary(self, default_iter):
         """
         Unmark the vehicle as stationary.
         """
         self.is_stationary = False
-        self.reset_frame_stationary()
+        self.reset_iterations_stationary(default_iter)
 
-    def decrease_frame_stationary(self):
+    def decrease_iterations_stationary(self):
         """
-        Decrease number of frame for stationary vehicle.
+        Decrease number of interatons for stationary vehicle.
         """
         if self.is_stationary:
             self.num_frame_to_remove_vehicle -= 1
@@ -142,11 +139,11 @@ class Vehicle:
         """
         self.iteration = iter
 
-    def reset_frame_stationary(self):
+    def reset_iterations_stationary(self, default_iter):
         """
-        Resets (sets default value) the number of frame to remove vehicle into list.
+        Resets (sets default value) the number of iterations to remove vehicle into list.
         """
-        self.num_frame_to_remove_vehicle = num_frame_stationary
+        self.num_frame_to_remove_vehicle = default_iter
 
     def to_string(self):
         """
