@@ -525,6 +525,7 @@ class Motion:
 
         :return True if the vehicle need to be redesigned, false otherwise.
         """
+        repaint_vehicle = False
         max_distance = 50
         min_distance, result = self.get_distance(coordinates, self.deleted_vehicles, max_distance=max_distance,
                                                  _log="Repaint")
@@ -532,14 +533,14 @@ class Motion:
         if min_distance < max_distance and result is not None:
 
             # Check if the vehicle is already to be drawn
-            flag = False
             for vehicle_to_draw in self.vehicles_to_draw:
                 if result.name == vehicle_to_draw.name:
-                    flag = True
+                    repaint_vehicle = True
                     break
 
-            if not flag:
+            if not repaint_vehicle:
                 log(3, f"{_log} {result.name}")
+                repaint_vehicle = True
 
                 if min_distance < self.dist_for_stationary:
                     # Stationary vehicle
@@ -553,8 +554,10 @@ class Motion:
                     self.current_vehicles.append(result)
                     self.prev_vehicles, _ = Utility.delete_item_in_list(self.prev_vehicles, result.name)
                     self.vehicles_to_draw = Utility.check_vehicle_in_list(self.vehicles_to_draw, result)
+            else:
+                repaint_vehicle = False
 
-        return False
+        return repaint_vehicle
 
     def check_vehicle_by_colors(self, coordinates):
         """
@@ -571,7 +574,7 @@ class Motion:
         for vehicle in self.current_vehicles:
 
             distance = Utility.get_length(vehicle.centroid, centroid)
-            if distance <= 40:
+            if distance <= 30:
 
                 intensity = vehicle.average_intensity
 
