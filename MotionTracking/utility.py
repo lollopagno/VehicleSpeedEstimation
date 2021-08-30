@@ -111,6 +111,31 @@ def get_area(contour, min_area=40):
     return min_area >= area or len(approx) < 4
 
 
+def discard_area(cnt, polygons, img, excluded_area):
+    """
+    Discard the area if it is too small or if the point isn't inside the polygon.
+
+    :param cnt: contours.
+    :param polygons: polygons.
+    :param img: img.
+    :param excluded_area: bool, if true it doesn't consider the polygon.
+    """
+
+    (x, y, w, h) = cv.boundingRect(cnt)
+    coordinates = ((x, y), (x + w, y + h))
+
+    if get_area(cnt):
+        # Discard small areas
+        return True, []
+
+    if not excluded_area:
+        if check_polygon(img, polygons, coordinates=coordinates):
+            # Check if the point is inside the polygon
+            return True, []
+
+    return False, coordinates
+
+
 def get_intensity(mask, coordinates):
     """
     Gets average value among the intensity of the pixels.
