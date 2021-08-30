@@ -133,7 +133,7 @@ class OpticalFlowDense:
 
                     if not self.excluded_area:
                         frame = cv.bitwise_and(frame, frame, mask=mask_poly)
-                        # for polygon in self.polygons:
+                        #for polygon in self.polygons:
                         #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
 
                     if not self.excluded_area:
@@ -146,6 +146,7 @@ class OpticalFlowDense:
                                                        iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
                     Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45), dim=1.5, color=Color.RED)
+
                     self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.fps,
                                                excluded_area=self.excluded_area, polygons=self.polygons)
 

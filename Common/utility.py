@@ -95,7 +95,7 @@ def get_random_color(list):
     return result, list
 
 
-def get_area(contour, min_area=70):
+def get_area(contour, min_area=40):
     r"""
     Get the area of a specific contour.
 
@@ -113,11 +113,12 @@ def get_area(contour, min_area=70):
 
 def get_intensity(mask, coordinates):
     """
-    Gets averege value among the intensity of the pixels.
+    Gets average value among the intensity of the pixels.
 
     :param mask: mask.
     :param coordinates: coordinates of the area to calculate the average.
     """
+
     try:
         p1, _, _, p4 = coordinates
     except:
@@ -125,12 +126,15 @@ def get_intensity(mask, coordinates):
 
     (x_start, y_start), (x_end, y_end) = p1, p4
 
+    mask = mask[y_start:y_end, x_start:x_end]
+    mask = mask[:, :, 0]  # Component H
+
     try:
-        avg_color_per_row = np.average(mask[y_start:y_end, x_start:x_end], axis=0)
-        avg_color = np.average(avg_color_per_row, axis=0)
-        color_hsv = [round(avg_color[0], 3), round(avg_color[1], 3), round(avg_color[2], 3)]
+        avg_color_per_row = np.average(mask)
+        avg_color = np.average(avg_color_per_row)
+        color_hsv = round(avg_color)
     except ZeroDivisionError:
-        color_hsv = [0, 0, 0]
+        color_hsv = 0
 
     return color_hsv
 
@@ -168,28 +172,23 @@ def check_polygon(img, polygons, coordinates):
         centroid = get_centroid(coordinates)
         point = (int(centroid[0]), int(centroid[1]))
 
-    for polygon in polygons:
-        is_inside = cv.pointPolygonTest(polygon, point, False)
+        for polygon in polygons:
+            is_inside = cv.pointPolygonTest(polygon, point, False)
 
-        if is_inside >= 0:
-            is_out = False
-            break
-
-    if is_out:
-        # Todo: delete in the future
-        try:
-            cv.circle(img, point, 35, (0, 0, 255), thickness=10)
-        except:
-            pass
+            if is_inside >= 0:
+                # Point is inside the polygon
+                is_out = False
+                break
 
     return is_out
 
 
-def draw_vehicles(vehicles, img):
+def draw_vehicles(vehicles, iteration, img):
     r"""
     Draw the bounding box of a vehicle.
 
     :param img: img to draw in.
+    :param iteration: current iteration.
     :param vehicles: vehicles to draw.
     """
 
@@ -197,6 +196,8 @@ def draw_vehicles(vehicles, img):
 
     for vehicle in vehicles:
         log(3, vehicle.name)
+
+        vehicle.set_iteration(iteration)
 
         thick = int((height + width) // 900)
 
@@ -230,7 +231,10 @@ def get_coordinates_bb(points):
     :return: array with four coordinates of the bouding box.
     """
 
-    (x_start, y_start), (x_end, y_end) = points
+    try:
+        (x_start, y_start), (x_end, y_end) = points
+    except:
+        (x_start, y_start), _, _, (x_end, y_end) = points
 
     point_2 = (x_end, y_start)
     point_3 = (x_start, y_end)
@@ -262,7 +266,7 @@ def get_velocity(distance, fps):
     return distance * ms2kmh * fps * px2m
 
 
-def check_exit_to_the_scene(img, coordinates, max_value=10):
+def check_exit_to_the_scene(img, coordinates, max_value=5):
     r"""
     The functions checks if the vehicle leave to the scene.
 
@@ -273,7 +277,11 @@ def check_exit_to_the_scene(img, coordinates, max_value=10):
     :return: True if the vehicle is out of the scene, otherwise False.
     """
 
-    (x_start, y_start), (x_end, y_end) = coordinates[0], coordinates[3]
+    try:
+        (x_start, y_start), (x_end, y_end) = coordinates[0], coordinates[3]
+    except:
+        (x_start, y_start), (x_end, y_end) = coordinates[0], coordinates[1]
+
     height, width, _ = img.shape
 
     if (x_start <= max_value and x_end <= max_value) or (x_start >= width - max_value and x_end >= width - max_value):
@@ -297,12 +305,36 @@ def delete_item_in_list(list, name):
     :return: list updated.
     """
 
+    is_deleted = False
     for index, vehicle in enumerate(list):
         if vehicle.name == name:
             del list[index]
+            is_deleted = True
             break
 
-    return list
+    return list, is_deleted
+
+
+def delete_all_items_in_list(list, name):
+    r"""
+    Delete all vehicles by name in list.
+
+    :param list: list of vehicles.
+    :param name: name of vehicle to be deleted.
+
+    :return: list updated.
+    """
+
+    is_deleted = False
+    tmp_list = list.copy()
+    count_deleted = 0
+    for index, vehicle in enumerate(list):
+        if vehicle.name == name:
+            del tmp_list[index - count_deleted]
+            count_deleted += 1
+            is_deleted = True
+
+    return tmp_list, is_deleted
 
 
 def check_vehicle_in_list(list, vehicle_to_search):
@@ -408,14 +440,14 @@ def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
         directions_map[-1, 1:] = 0
         directions_map = np.roll(directions_map, -1, axis=0)
 
-    elif 70 < move_mode <= 160:
+    elif 70 < move_mode <= 180:
         # Right
         directions_map[-1, 1] = 1
         directions_map[-1, :1] = 0
         directions_map[-1, 2:] = 0
         directions_map = np.roll(directions_map, -1, axis=0)
 
-    elif 160 < move_mode <= 250:
+    elif 180 < move_mode <= 250:
         # Up
         directions_map[-1, 2] = 1
         directions_map[-1, :2] = 0
