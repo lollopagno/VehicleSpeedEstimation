@@ -1,6 +1,6 @@
-from Common import utility as Utility
 from colorama import Fore
-from Common.utility import UP, DOWN, LEFT, RIGHT
+from MotionTracking.utility import UP, DOWN, LEFT, RIGHT
+from MotionTracking import utility as Utility
 
 UNKNOWN = "Unknown"
 

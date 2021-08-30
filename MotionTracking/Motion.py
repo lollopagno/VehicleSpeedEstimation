@@ -2,65 +2,11 @@ import cv2 as cv
 import numpy as np
 
 import Common.color as Color
-import Common.utility as Utility
-from Common.table import COLUMN_VELOCITY, COLUMN_DIRECTION, COLUMN_STATIONARY
-from Common.utility import log
+from MotionTracking.table import COLUMN_VELOCITY, COLUMN_DIRECTION, COLUMN_STATIONARY
+from MotionTracking.utility import log
 from MotionTracking.Vehicle import UNKNOWN
 from MotionTracking.Vehicle import Vehicle
-
-
-def detect_motion_sparse(img, frame_1, frame_2, kernel=None, filter_blur=(5, 5), iter_dilate=4, VALUE_AREA=150):
-    r"""
-
-    """
-    frame_1 = cv.cvtColor(frame_1, cv.COLOR_GRAY2BGR)
-    frame_2 = cv.cvtColor(frame_2, cv.COLOR_GRAY2BGR)
-
-    diff = cv.absdiff(frame_1, frame_2)
-    diff_gray = cv.cvtColor(diff, cv.COLOR_BGR2GRAY)
-    blur = cv.GaussianBlur(diff_gray, filter_blur, 0)
-    _, thresh = cv.threshold(blur, 20, 255, cv.THRESH_BINARY)
-
-    dilate = cv.dilate(thresh, kernel, iterations=iter_dilate)
-
-    cv.imshow("Dilate", dilate)
-    cv.waitKey(1)
-
-    contours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
-    for cnt in contours:
-        (x, y, w, h) = cv.boundingRect(cnt)
-        area = cv.contourArea(cnt)
-
-        if area <= VALUE_AREA:
-            continue
-
-        cv.rectangle(img, (x, y), (x + w, y + h), Color.RED, 2)
-
-
-def discard_area(cnt, polygons, img, excluded_area):
-    """
-    Discard the area if it is too small or if the point isn't inside the polygon.
-
-    :param cnt: contourn.
-    :param polygons: polygons.
-    :param img: img.
-    :param excluded_area: bool, if true it doesn't consider the polygon.
-    """
-
-    (x, y, w, h) = cv.boundingRect(cnt)
-    coordinates = ((x, y), (x + w, y + h))
-
-    if Utility.get_area(cnt):
-        # Discard small areas
-        return True, []
-
-    if not excluded_area:
-        if Utility.check_polygon(img, polygons, coordinates=coordinates):
-            # Check if the point is inside the polygon
-            return True, []
-
-    return False, coordinates
+from MotionTracking import utility as Utility
 
 
 class Motion:
@@ -148,7 +94,7 @@ class Motion:
             """
 
             for num, cnt in enumerate(contours):
-                ret, coordinates = discard_area(cnt, polygons, img, excluded_area)
+                ret, coordinates = Utility.discard_area(cnt, polygons, img, excluded_area)
 
                 if ret:
                     continue
@@ -174,7 +120,7 @@ class Motion:
             tmp_new_coordinates = []
 
             for num, cnt in enumerate(contours):
-                ret, coordinates = discard_area(cnt, polygons, img, excluded_area)
+                ret, coordinates = Utility.discard_area(cnt, polygons, img, excluded_area)
 
                 if ret:
                     continue
