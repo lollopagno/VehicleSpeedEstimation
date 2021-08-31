@@ -11,6 +11,7 @@ from MotionTracking.table import Table
 from MotionTracking.utility import log
 from MotionTracking.Motion import Motion
 from MotionTracking import utility as Utility
+from Calibration.ModuleCalibration import load_coefficients
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Dense"
 
@@ -88,6 +89,11 @@ class OpticalFlowDense:
         cv.namedWindow(WINDOW_OPTICAL_FLOW)
         cv.setMouseCallback(WINDOW_OPTICAL_FLOW, callback_mouse)
 
+        data = load_coefficients("Calibration/data")
+        camera_matrix, dist_matrix, rvecs, tvecs = data
+        newcameramtx, roi = cv.getOptimalNewCameraMatrix(camera_matrix, dist_matrix, (self.width, self.height), 0,
+                                                         (self.width, self.height))
+
         if self.show_log:
             log(0, "Optical Flow Dense start!")
             log(0, f"City: {self.obj_city['Name']}")
@@ -96,6 +102,8 @@ class OpticalFlowDense:
 
         _, first_frame = self.camera.read()
         first_frame = cv.resize(first_frame, (self.width, self.height))
+        first_frame = cv.undistort(first_frame, camera_matrix, dist_matrix, None, newcameramtx)
+
         prev_gray = cv.cvtColor(first_frame, cv.COLOR_BGR2GRAY)
 
         stack = Utility.stack_images(1, ([first_frame, first_frame]))
@@ -128,12 +136,14 @@ class OpticalFlowDense:
 
                     frame = cv.medianBlur(frame, ksize=5)
                     frame = cv.resize(frame, (self.width, self.height))
+                    frame = cv.undistort(frame, camera_matrix, dist_matrix, None, newcameramtx)
+
                     frame_copy = frame.copy()
                     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
                     if not self.excluded_area:
                         frame = cv.bitwise_and(frame, frame, mask=mask_poly)
-                        #for polygon in self.polygons:
+                        # for polygon in self.polygons:
                         #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
 
                     if not self.excluded_area:
