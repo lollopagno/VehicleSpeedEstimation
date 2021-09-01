@@ -30,14 +30,14 @@ class OpticalFlowDense:
     Class to detect moving vehicles by implementation of optical flow dense.
     """
 
-    def __init__(self, video_url, height_cam=512, width_cam=750, exclude_area=True, show_log=True):
+    def __init__(self, video_url, height_cam=512, width_cam=750, excluded_area=True, show_log=True):
         """"
         Constructor of class.
 
         :param video_url: url to get video.
         :param height_cam: height of camera.
         :param width_cam: width of camera.
-        :param exclude_area: bool, if true it doesn't consider the polygon.
+        :param excluded_area: bool, if true it doesn't consider the polygon.
         :param show_log: bool, of true show the log.
         """
 
@@ -48,10 +48,10 @@ class OpticalFlowDense:
 
         # Table
         self.app_qt = QApplication(sys.argv)
-        self.table = Table()
+        self.table = Table(show_log)
 
         # Object Motion
-        self.motion = Motion(self.table)
+        self.motion = Motion(self.table, excluded_area, show_log)
 
         # Frame Rate
         self.frame_rate_x, self.frame_rate_y = video_url["Frame rate"]
@@ -62,8 +62,8 @@ class OpticalFlowDense:
         self.alpha = 0.5
 
         # Flag
-        self.excluded_area = exclude_area
-        self.show_log = show_log  # TODO insert this in code!
+        self.excluded_area = excluded_area
+        self.show_log = show_log
         self.iterations = 0
 
         # City
@@ -86,6 +86,10 @@ class OpticalFlowDense:
                          color=Color.RED, thickness=2)
 
     def run(self):
+        """
+        Trackin vehicles by optical flow.
+        """
+
         cv.namedWindow(WINDOW_OPTICAL_FLOW)
         cv.setMouseCallback(WINDOW_OPTICAL_FLOW, callback_mouse)
 
@@ -155,10 +159,11 @@ class OpticalFlowDense:
                     flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
                                                        iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
-                    Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45), dim=1.5, color=Color.RED)
+                    if self.show_log:
+                        Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45), dim=1.5, color=Color.RED)
 
                     self.motion.detect_vehicle(img=frame, flow=flow, iter=self.iterations, fps=self.fps,
-                                               excluded_area=self.excluded_area, polygons=self.polygons)
+                                               polygons=self.polygons)
 
                     stack = Utility.stack_images(1, ([frame, frame_copy]))
                     cv.imshow(WINDOW_OPTICAL_FLOW, stack)

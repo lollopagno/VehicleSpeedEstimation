@@ -36,8 +36,11 @@ def get_column_index(name_column):
 
 
 class Table(QWidget):
+    """
+    Qt Table class.
+    """
 
-    def __init__(self):
+    def __init__(self, show_log):
         super().__init__()
         self.title = 'Vehicle list'
         self.left = 0
@@ -47,6 +50,8 @@ class Table(QWidget):
 
         self.layout = QVBoxLayout()
         self.table = QTableWidget()
+
+        self.show_log = show_log
 
         self.init_ui()
 
@@ -86,7 +91,9 @@ class Table(QWidget):
             if not self.check_cell(COLUMN_VEHICLE, item.name):
                 color = item.color
                 color_qt = QColor.fromRgb(color[2], color[1], color[0])
-                log(2, f"Add row: {item.name}, {item.velocity}, {color}")
+
+                if self.show_log:
+                    log(2, f"Add row: {item.name}, {item.velocity}, {color}")
 
                 current_row = self.table.rowCount()
                 item_color = QTableWidgetItem()
@@ -120,7 +127,8 @@ class Table(QWidget):
         :param name_vehicle: name of the vehicle to be deleted.
         """
 
-        log(2, f"Delete row of {name_vehicle}")
+        if self.show_log:
+            log(2, f"Delete row of {name_vehicle}")
 
         columns = self.table.columnCount()
         rows = self.table.rowCount()
@@ -148,7 +156,7 @@ class Table(QWidget):
         :param name_column: column name.
         :param name_cell: text to search into cell of the table.
 
-        :return: True if text is present, false otherwise.
+        :return: bool, true if text is present, false otherwise.
         """
 
         columns = self.table.columnCount()
@@ -199,7 +207,9 @@ class Table(QWidget):
                         item_cell = QTableWidgetItem(str(data))
                         item_cell.setTextAlignment(Qt.AlignHCenter)
 
-                        log(2, f"Update {name_column} [{data}] of row: {name_vehicle}")
+                        if self.show_log:
+                            log(2, f"Update {name_column} [{data}] of row: {name_vehicle}")
+
                         self.table.setItem(row, index, item_cell)
                         break
         self.update()

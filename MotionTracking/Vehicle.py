@@ -133,7 +133,7 @@ class Vehicle:
 
     def set_iteration(self, iter):
         """
-        Update number iterations for stationary vehicle.
+        Update number iterations for the vehicle.
 
         :param iter: new value iteration.
         """

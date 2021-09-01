@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-from colorama import Fore
+from colorama import Fore, Style
 import time
 from ModuleCalibration import ModuleCalibration as MC
 
@@ -17,6 +17,7 @@ def callback_mouse(event, x, y, flag, param):
     if event == cv.EVENT_LBUTTONDOWN:
         frame = calibration.frame
         print(Fore.GREEN + f"Clicked image in position {x, y}")
+        print(Style.RESET_ALL)
 
         success, img = calibration.start(frame)
 
