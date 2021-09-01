@@ -1,7 +1,6 @@
 import cv2 as cv
-import pafy
 
-from Common.utility import log
+from MotionTracking.Utility import log
 
 
 def get_video(url, height, width):
@@ -20,7 +19,7 @@ def get_video(url, height, width):
             #play = video_pafy.getbest()
             #cap = cv.VideoCapture(play.url)
 
-            cap = cv.VideoCapture("video/cambridge3.avi")
+            cap = cv.VideoCapture("video/cambridge4.avi")
             cap.set(cv.CAP_PROP_FRAME_WIDTH, width)
             cap.set(cv.CAP_PROP_FRAME_HEIGHT, height)
             flag = True

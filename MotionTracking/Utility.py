@@ -102,13 +102,37 @@ def get_area(contour, min_area=40):
     :param contour: contour.
     :param min_area: minimum area value.
 
-    :return: True if the contour is to be discarded, false otherwise.
+    :return: bool, true if the contour is to be discarded, false otherwise.
     """
 
     area = cv.contourArea(contour)
     peri = cv.arcLength(contour, True)
     approx = cv.approxPolyDP(contour, 0.04 * peri, True)
     return min_area >= area or len(approx) < 4
+
+
+def discard_area(cnt, polygons, excluded_area):
+    """
+    Discard the area if it is too small or if the point isn't inside the polygon.
+
+    :param cnt: contour.
+    :param polygons: polygon.
+    :param excluded_area: bool, if true it doesn't consider the polygon.
+    """
+
+    (x, y, w, h) = cv.boundingRect(cnt)
+    coordinates = ((x, y), (x + w, y + h))
+
+    if get_area(cnt):
+        # Discard small areas
+        return True, []
+
+    if not excluded_area:
+        if check_polygon(polygons, coordinates=coordinates):
+            # Check if the point is inside the polygon
+            return True, []
+
+    return False, coordinates
 
 
 def get_intensity(mask, coordinates):
@@ -157,11 +181,11 @@ def get_polygon(city):
     return polygon
 
 
-def check_polygon(img, polygons, coordinates):
+def check_polygon(polygons, coordinates):
     """
     Check if the coordinates are inside the polygon.
 
-    :param polygons: polygons of the city.
+    :param polygons: polygon of the city.
     :param coordinates: coordinates to check.
 
     return: bool, True if the coordinates are out the polygon, false otherwise.
@@ -408,7 +432,7 @@ def stack_images(scale, imgArray):
     return ver
 
 
-def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
+def get_direction(coordinates, angle, magnitude, threshold=10.0):
     """
     Calculate the direction of the vehicles.
 
@@ -483,7 +507,5 @@ def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
 
     else:
         text = STATIONARY
-
-    print(f"{v}, direction: [{move_mode}] - {text}", end="\n\n")
 
     return text
