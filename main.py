@@ -12,7 +12,7 @@ class App:
         self.op_dense = OpticalFlowDense(video_url=video_url,
                                          height_cam=height_cam,
                                          width_cam=width_cam,
-                                         exclude_area=False,
+                                         excluded_area=False,
                                          show_log=True)
 
     def run(self):

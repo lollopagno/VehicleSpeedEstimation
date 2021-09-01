@@ -1,6 +1,6 @@
 from colorama import Fore
-from MotionTracking.utility import UP, DOWN, LEFT, RIGHT
-from MotionTracking import utility as Utility
+from MotionTracking.Utility import UP, DOWN, LEFT, RIGHT
+from MotionTracking import Utility as Utility
 
 UNKNOWN = "Unknown"
 
@@ -133,7 +133,7 @@ class Vehicle:
 
     def set_iteration(self, iter):
         """
-        Update number iterations for stationary vehicle.
+        Update number iterations for the vehicle.
 
         :param iter: new value iteration.
         """

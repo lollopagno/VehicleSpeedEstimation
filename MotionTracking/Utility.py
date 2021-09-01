@@ -102,7 +102,7 @@ def get_area(contour, min_area=40):
     :param contour: contour.
     :param min_area: minimum area value.
 
-    :return: True if the contour is to be discarded, false otherwise.
+    :return: bool, true if the contour is to be discarded, false otherwise.
     """
 
     area = cv.contourArea(contour)
@@ -111,13 +111,12 @@ def get_area(contour, min_area=40):
     return min_area >= area or len(approx) < 4
 
 
-def discard_area(cnt, polygons, img, excluded_area):
+def discard_area(cnt, polygons, excluded_area):
     """
     Discard the area if it is too small or if the point isn't inside the polygon.
 
-    :param cnt: contours.
-    :param polygons: polygons.
-    :param img: img.
+    :param cnt: contour.
+    :param polygons: polygon.
     :param excluded_area: bool, if true it doesn't consider the polygon.
     """
 
@@ -129,7 +128,7 @@ def discard_area(cnt, polygons, img, excluded_area):
         return True, []
 
     if not excluded_area:
-        if check_polygon(img, polygons, coordinates=coordinates):
+        if check_polygon(polygons, coordinates=coordinates):
             # Check if the point is inside the polygon
             return True, []
 
@@ -182,11 +181,11 @@ def get_polygon(city):
     return polygon
 
 
-def check_polygon(img, polygons, coordinates):
+def check_polygon(polygons, coordinates):
     """
     Check if the coordinates are inside the polygon.
 
-    :param polygons: polygons of the city.
+    :param polygons: polygon of the city.
     :param coordinates: coordinates to check.
 
     return: bool, True if the coordinates are out the polygon, false otherwise.
@@ -433,7 +432,7 @@ def stack_images(scale, imgArray):
     return ver
 
 
-def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
+def get_direction(coordinates, angle, magnitude, threshold=10.0):
     """
     Calculate the direction of the vehicles.
 
@@ -508,7 +507,5 @@ def get_direction(v, coordinates, angle, magnitude, threshold=10.0):
 
     else:
         text = STATIONARY
-
-    print(f"{v}, direction: [{move_mode}] - {text}", end="\n\n")
 
     return text
