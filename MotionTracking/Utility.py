@@ -290,7 +290,7 @@ def get_velocity(distance, fps):
     return distance * ms2kmh * fps * px2m
 
 
-def check_exit_to_the_scene(img, coordinates, max_value=5):
+def check_exit_to_the_scene(img, coordinates, max_value=8):
     r"""
     The functions checks if the vehicle leave to the scene.
 
