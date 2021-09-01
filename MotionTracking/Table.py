@@ -2,7 +2,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout
 from PyQt5.Qt import Qt
 
-from MotionTracking.utility import log
+from MotionTracking.Utility import log
 
 COLUMN_VEHICLE = "Vehicle"
 COLUMN_VELOCITY = "Velocity"

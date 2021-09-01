@@ -1,6 +1,6 @@
 import cv2 as cv
 
-from MotionTracking.utility import log
+from MotionTracking.Utility import log
 
 
 def get_video(url, height, width):

@@ -2,11 +2,11 @@ import cv2 as cv
 import numpy as np
 
 import Common.color as Color
-from MotionTracking.table import COLUMN_VELOCITY, COLUMN_DIRECTION, COLUMN_STATIONARY
-from MotionTracking.utility import log
+from MotionTracking.Table import COLUMN_VELOCITY, COLUMN_DIRECTION, COLUMN_STATIONARY
+from MotionTracking.Utility import log
 from MotionTracking.Vehicle import UNKNOWN
 from MotionTracking.Vehicle import Vehicle
-from MotionTracking import utility as Utility
+from MotionTracking import Utility as Utility
 
 
 class Motion:

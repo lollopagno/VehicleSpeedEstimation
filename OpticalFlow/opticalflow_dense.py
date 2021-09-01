@@ -7,10 +7,10 @@ from PyQt5.QtWidgets import QApplication
 
 from Common import color as Color
 from Common.load_video import get_video
-from MotionTracking.table import Table
-from MotionTracking.utility import log
+from MotionTracking.Table import Table
+from MotionTracking.Utility import log
 from MotionTracking.Motion import Motion
-from MotionTracking import utility as Utility
+from MotionTracking import Utility as Utility
 from Calibration.ModuleCalibration import load_coefficients
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Dense"

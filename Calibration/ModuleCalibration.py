@@ -24,7 +24,7 @@ class ModuleCalibration:
         try:
             self.path = "data"
             os.mkdir(self.path)
-        except Exception as e:
+        except Exception:
             pass
 
     def start(self, frame):
