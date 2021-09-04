@@ -207,19 +207,22 @@ def check_polygon(polygons, coordinates):
     return is_out
 
 
-def draw_vehicles(vehicles, iteration, img):
+def draw_vehicles(vehicles, iteration, img, show_log):
     r"""
     Draw the bounding box of a vehicle.
 
     :param img: img to draw in.
     :param iteration: current iteration.
     :param vehicles: vehicles to draw.
+    :param show_log: bool, if true the logs are showed.
     """
 
     height, width, _ = img.shape
 
     for vehicle in vehicles:
-        log(3, vehicle.name)
+
+        if show_log:
+            log(3, vehicle.name)
 
         vehicle.set_iteration(iteration)
 
@@ -290,7 +293,7 @@ def get_velocity(distance, fps):
     return distance * ms2kmh * fps * px2m
 
 
-def check_exit_to_the_scene(img, coordinates, max_value=5):
+def check_exit_to_the_scene(img, coordinates, max_value=8):
     r"""
     The functions checks if the vehicle leave to the scene.
 
