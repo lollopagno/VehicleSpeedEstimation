@@ -5,13 +5,13 @@ import cv2 as cv
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 
+from Calibration.ModuleCalibration import load_coefficients
 from Common import color as Color
 from Common.load_video import get_video
+from MotionTracking import Utility as Utility
+from MotionTracking.Motion import Motion
 from MotionTracking.Table import Table
 from MotionTracking.Utility import log
-from MotionTracking.Motion import Motion
-from MotionTracking import Utility as Utility
-from Calibration.ModuleCalibration import load_coefficients
 
 WINDOW_OPTICAL_FLOW = "Optical Flow Dense"
 
@@ -37,14 +37,14 @@ class OpticalFlowDense:
         :param video_url: url to get video.
         :param height_cam: height of camera.
         :param width_cam: width of camera.
-        :param excluded_area: bool, if true it doesn't consider the polygon.
+        :param excluded_area: bool, if true it does consider the polygon.
         :param show_log: bool, of true show the log.
         """
 
         # Camera
         self.height = height_cam
         self.width = width_cam
-        self.camera = get_video(video_url["Url"], self.height, self.width)
+        self.camera = get_video(video_url["Path"], self.height, self.width)
 
         # Table
         self.app_qt = QApplication(sys.argv)
@@ -118,7 +118,7 @@ class OpticalFlowDense:
         cv.imshow("Masks", stack_mask)
         key = cv.waitKey(0)
 
-        if not self.excluded_area:
+        if self.excluded_area:
             self.polygons = Utility.get_polygon(self.obj_city)
             mask_poly = np.zeros_like(first_frame[:, :, 0])
 
@@ -145,12 +145,12 @@ class OpticalFlowDense:
                     frame_copy = frame.copy()
                     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
-                    if not self.excluded_area:
+                    if self.excluded_area:
                         frame = cv.bitwise_and(frame, frame, mask=mask_poly)
                         # for polygon in self.polygons:
                         #    cv.polylines(frame, [polygon], True, (255, 0, 255), 8)
 
-                    if not self.excluded_area:
+                    if self.excluded_area:
                         frame = cv.addWeighted(frame_copy, self.alpha, frame, 1 - self.alpha, 0)
 
                     self.frame_rate(frame)

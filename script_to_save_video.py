@@ -5,7 +5,7 @@ from Common import url as Url
 
 PATH = "video/cambridge9.avi"
 
-video_pafy = pafy.new(Url.CAMBRIDGE['Url'])
+video_pafy = pafy.new(Url.CAMBRIDGE['Path'])
 play = video_pafy.getbest()
 cap = cv.VideoCapture(play.url)
 
