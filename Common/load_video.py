@@ -27,7 +27,7 @@ def get_video(url, height, width):
         else:
             try:
                 ### Get local video ###
-                cap = cv.VideoCapture("video/Derry/derry1.avi")
+                cap = cv.VideoCapture(url)
                 cap.set(cv.CAP_PROP_FRAME_WIDTH, width)
                 cap.set(cv.CAP_PROP_FRAME_HEIGHT, height)
                 flag = True

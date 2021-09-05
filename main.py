@@ -23,7 +23,7 @@ if __name__ == "__main__":
     r"""
     Main
     """
-    app = App(video_url=Url.DERRY,
+    app = App(video_url=Url.CAMBRIDGE,
               excluded_area=True,
               show_log=True,
               type_op=DENSE)
