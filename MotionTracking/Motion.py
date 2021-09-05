@@ -19,7 +19,7 @@ class Motion:
         Constructor of class Motion.
 
         :param table object table.
-        :param excluded_area: bool, if true it doesn't consider the polygon.
+        :param excluded_area: bool, if true it does consider the polygon.
         :param show_log: bool, if true the logs are showed.
         :param iterations_history: maximum number frame before deleting the vehicle history.
         :param iterations_stationary: maximum number frame before deleting the stationary vehicle.

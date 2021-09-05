@@ -117,7 +117,7 @@ def discard_area(cnt, polygons, excluded_area):
 
     :param cnt: contour.
     :param polygons: polygon.
-    :param excluded_area: bool, if true it doesn't consider the polygon.
+    :param excluded_area: bool, if true it does consider the polygon.
     """
 
     (x, y, w, h) = cv.boundingRect(cnt)
@@ -127,7 +127,7 @@ def discard_area(cnt, polygons, excluded_area):
         # Discard small areas
         return True, []
 
-    if not excluded_area:
+    if excluded_area:
         if check_polygon(polygons, coordinates=coordinates):
             # Check if the point is inside the polygon
             return True, []
