@@ -1,5 +1,5 @@
 import Common.url as Url
-from OpticalFlow.opticalflow_dense import OpticalFlowDense
+from OpticalFlow.opticalflowDense import OpticalFlowDense
 
 DENSE = "Dense"
 
