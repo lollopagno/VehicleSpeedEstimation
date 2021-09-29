@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication
 
 from Calibration.ModuleCalibration import load_coefficients
 from Common import color as Color
-from Common.load_video import get_video
+from Common.loadVideo import get_video
 from MotionTracking import Utility as Utility
 from MotionTracking.Motion import Motion
 from MotionTracking.Table import Table
