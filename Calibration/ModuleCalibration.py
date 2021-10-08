@@ -54,6 +54,17 @@ class ModuleCalibration:
         gray = cv.cvtColor(self.frame, cv.COLOR_BGR2GRAY)
         ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(self.obj_points, self.img_points, gray.shape[::-1], None,
                                                           None)
+        mean_error = 0
+        for i in range(len(self.obj_points)):
+            img_points_2, _ = cv.projectPoints(self.obj_points[i], rvecs[i], tvecs[i], mtx,
+                                               dist)  # Proietta i punti 3D in un immagine planare
+            error = cv.norm(self.img_points[i], img_points_2, cv.NORM_L2) / len(img_points_2)
+            mean_error += error
+
+        error = np.divide(mean_error, len(self.obj_points))
+
+        print(f"Save file! Error: {error}")
+        # Error: 0.02237211881488285
         np.savez(self.path + "/data_calibration.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
 
 
