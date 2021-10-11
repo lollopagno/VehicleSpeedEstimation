@@ -64,11 +64,12 @@ class Motion:
         self.show_log = show_log
         self.excluded_area = excluded_area
 
-    def detect_vehicle(self, img, flow, iter, fps, polygons):
+    def detect_vehicle(self, img, img_to_draw, flow, iter, fps, polygons):
         r"""
         Detect vehicle into img
-        .
+
         :param img: img.
+        :param img_to_draw: img in which to draw vehicles.
         :param flow: optical flow.
         :param iter: current iteration.
         :param fps: current frame per second.
@@ -115,7 +116,8 @@ class Motion:
                         self.create_new_vehicle(coordinates)
 
             # Updates list to draw vehicles and update table
-            Utility.draw_vehicles(self.vehicles_to_draw + self.vehicles_stationary, self.iteration, img, self.show_log)
+            Utility.draw_vehicles(self.vehicles_to_draw + self.vehicles_stationary, self.iteration, img_to_draw,
+                                  self.show_log)
             self.table.add_rows(self.vehicles_to_draw + self.vehicles_stationary)
 
         else:
@@ -140,7 +142,8 @@ class Motion:
             for coordinates in tmp_new_coordinates:
                 self.add_new_vehicles(coordinates)
 
-            Utility.draw_vehicles(self.vehicles_to_draw + self.vehicles_stationary, self.iteration, img, self.show_log)
+            Utility.draw_vehicles(self.vehicles_to_draw + self.vehicles_stationary, self.iteration, img_to_draw,
+                                  self.show_log)
             self.table.add_rows(self.vehicles_to_draw + self.vehicles_stationary)
 
             for vehicle in self.prev_vehicles:
