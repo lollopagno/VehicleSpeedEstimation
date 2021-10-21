@@ -174,6 +174,9 @@ class OpticalFlowDense:
                     flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11,
                                                        iterations=5, poly_n=5, poly_sigma=1.1, flags=0)
 
+                    # flow = cv.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=15,
+                    #                                    iterations=2, poly_n=5, poly_sigma=1.1, flags=0)
+
                     if self.show_log:
                         Utility.set_text(frame, f"Iter: {self.iterations}", (40, 45), dim=1.5, color=Color.RED)
 

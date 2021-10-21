@@ -3,7 +3,7 @@ import pafy
 
 from Common import url as Url
 
-PATH = "video/test_video.avi"
+PATH = "video/Cambridge/realTimeVideo2.avi"
 
 video_pafy = pafy.new(Url.CAMBRIDGE['Path'])
 play = video_pafy.getbest()
@@ -26,7 +26,7 @@ while cap.isOpened():
         video.write(frame)
         frame = cv.resize(frame, (650, 650))
         cv.imshow(window_name, frame)
-        cv.waitKey(22)
+        cv.waitKey(1)
 
         if 0xFF == ord('q'):
             break
